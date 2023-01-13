@@ -26,32 +26,30 @@ red_org <- haven::read_dta(
 
 #----------------------------------------------
 # airport locations
-airports_loc <- read.xlsx(
+airport_locations <- qs::qread(
     file.path(
-        data_path, "Flughaefen/flughaefen_loc/flughaefen_germany_prepared.xlsx"
-    ),
-    sheet = 1
+        data_path,
+        "Flughaefen/airport_locations_prep.qs"
+    )
 )
 
 #----------------------------------------------
 # noise contour
 
 # main airports
-haupt_contour <- st_read(
+haupt_contour <- qs::qread(
     file.path(
         data_path,
-        "Contour_Maps/Hauptflughaefen/Mair_Lden_17.shp"
-    ),
-    quiet = TRUE
+        "Contour_Maps/main_airports_contour.qs"
+    )
 )
 
-# airports in agglomeration areas
-ball_contour <- st_read(
+# all airports
+air_contour <- qs::qread(
     file.path(
         data_path,
-        "Contour_Maps/Ballungsraeume/Lden/Aggair_Lden_17.shp"
-    ),
-    quiet = TRUE
+        "Contour_Maps/all_airports_contour.qs"
+    )
 )
 
 ###############################################################
@@ -384,70 +382,8 @@ red_geo <- st_transform(
 # distance to airport building                                #
 ###############################################################
 
-#----------------------------------------------
-# preparation
-
-# keep only variables of interest
-airports_loc <- airports_loc |>
-    select("name", "city", "ICAO_code", "longitude", "latitude", "mainair")
-
-# select main airports
-main_airports <- airports_loc |>
+main_airports <- airport_locations |>
     filter(mainair == 1)
-
-# drop those that are not main airports in the analysis
-main_airports <- main_airports |>
-    filter(
-        ICAO_code == "EDDS" |
-        ICAO_code == "EDDN" |
-        ICAO_code == "EDDL" |
-        ICAO_code == "EDDT" |
-        ICAO_code == "EDDV" |
-        ICAO_code == "EDDB" |
-        ICAO_code == "EDDP" |
-        ICAO_code == "EDDF" |
-        ICAO_code == "EDDK" |
-        ICAO_code == "EDDH" |
-        ICAO_code == "EDDM"
-    )
-
-# select those that are airports in agglomeration areas
-agg_airports <- airports_loc |>
-    filter(
-        ICAO_code == "EDLE" |
-        ICAO_code == "EDFM" |
-        ICAO_code == "EDLW" |
-        ICAO_code == "EDDW" |
-        ICAO_code == "EDFZ" |
-        ICAO_code == "EDDC"
-    )
-
-# make sf and transform crs
-main_airports <- st_as_sf(
-    main_airports,
-    coords = c("longitude", "latitude"),
-    crs = 4326
-)
-main_airports <- st_transform(
-    main_airports,
-    crs = st_crs(red_geo)
-)
-
-agg_airports <- st_as_sf(
-    agg_airports,
-    coords = c("longitude", "latitude"),
-    crs = 4326
-)
-agg_airports <- st_transform(
-    agg_airports,
-    crs = st_crs(red_geo)
-)
-
-# define all airports
-airports <- rbind(main_airports, agg_airports)
-
-#----------------------------------------------
-# calculate distance
 
 # add distance to closest main airport (in km)
 red_geo$distance_main_airports_building <- as.numeric(
@@ -456,65 +392,12 @@ red_geo$distance_main_airports_building <- as.numeric(
 
 # add distance to the closest airport in general
 red_geo$distance_all_airports_building <- as.numeric(
-    apply(st_distance(red_geo, airports), 1, min)
+    apply(st_distance(red_geo, airport_locations), 1, min)
 ) / 1000
 
 ###############################################################
 # add closest airport based on shape                          #
 ###############################################################
-
-#----------------------------------------------
-# prepare noise contour data
-
-# transform
-haupt_contour <- st_transform(
-    haupt_contour,
-    crs = utmcrs
-)
-
-ball_contour <- st_transform(
-    ball_contour,
-    crs = utmcrs
-)
-
-# keep relevant columns
-haupt_contour <- haupt_contour |>
-    select(ICAO, DB_Low, DB_High, geometry) |>
-    rename(
-        icao = ICAO
-    )
-
-# keep relevant columns
-# add icao to agglomeration airports
-ball_contour <- ball_contour |>
-    select(Agglomerat, DB_Low, DB_High, geometry) |>
-    mutate(
-        icao = case_when(
-            Agglomerat == "Essen" ~ "EDLE",
-            Agglomerat == "Mülheim an der Ruhr" ~ "EDLE",
-            Agglomerat == "Mannheim" ~ "EDFM",
-            Agglomerat == "Dortmund" ~ "EDLW",
-            Agglomerat == "Bremen" ~ "EDDW",
-            Agglomerat == "Mainz" ~ "EDFZ",
-            Agglomerat == "Dresden" ~ "EDDC"
-        ),
-        Agglomerat = NULL
-    )
-
-# add identifier for main airports
-haupt_contour <- haupt_contour |>
-    mutate(
-        main_airport = 1
-    )
-ball_contour <- ball_contour |>
-    mutate(
-        main_airport = 0
-    )
-
-# combine both airport "types"
-airport_contour <- rbind(
-    haupt_contour, ball_contour
-)
 
 #----------------------------------------------
 # make union
@@ -525,7 +408,7 @@ main_airports_union <- haupt_contour |>
     summarise(geometry = st_union(geometry))
 
 # for all airports
-airports_union <- airport_contour |>
+airports_union <- air_contour |>
     group_by(icao) |>
     summarise(geometry = st_union(geometry))
 

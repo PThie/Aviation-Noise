@@ -2,20 +2,24 @@
 # load data                                                   #
 ###############################################################
 
-red_org <- haven::read_dta(file.path(dataImmo, "HK_allVersions_ohneText.dta"))
+red_org <- haven::read_dta(
+  file.path(
+    data_immo, "HK_allVersions_ohneText.dta"
+  )
+)
 
-# regional info (regional centers settlement density, and  regional types)
-regional_types <- read.fst(file.path(dataFlug, "raumtyp/raumtyp_siedlungsdicht_nach_gemeinde_prep.fst"))
-regional_center <- readRDS(file.path(dataFlug, "raumzentren/raumzentren_nach_gemeinde_prep.rds"))
+# # regional info (regional centers settlement density, and  regional types)
+# regional_types <- read.fst(file.path(dataFlug, "raumtyp/raumtyp_siedlungsdicht_nach_gemeinde_prep.fst"))
+# regional_center <- readRDS(file.path(dataFlug, "raumzentren/raumzentren_nach_gemeinde_prep.rds"))
 
-# railroad noise
-rail_noise <- st_read(file.path(dataFlug, "umgebungslaerm/schiene/Basisdaten/Mrail_Source_17.shp"))
+# # railroad noise
+# rail_noise <- st_read(file.path(dataFlug, "umgebungslaerm/schiene/Basisdaten/Mrail_Source_17.shp"))
 
-# industrial noise
-industry_noise <- read_sf(file.path(dataFlug, "umgebungslaerm/industrie/Ballungsraeume/Lden/Aggind_Lden_17.shp"))
+# # industrial noise
+# industry_noise <- read_sf(file.path(dataFlug, "umgebungslaerm/industrie/Ballungsraeume/Lden/Aggind_Lden_17.shp"))
 
-# street noise
-streets <- st_read(file.path(dataFlug, "umgebungslaerm/strasse/Hauptverkehrsstrassen/Basisdaten/Mroad_Source_17.shp"))
+# # street noise
+# streets <- st_read(file.path(dataFlug, "umgebungslaerm/strasse/Hauptverkehrsstrassen/Basisdaten/Mroad_Source_17.shp"))
 
 
 # airports ----------------------------------------------------------------
