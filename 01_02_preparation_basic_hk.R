@@ -69,10 +69,10 @@ red <- red |>
         kaufpreis = unclass(kaufpreis),
         ajahr = unclass(ajahr),
         amonat = unclass(amonat),
-        jahr = unclass(ejahr),
+        ejahr = unclass(ejahr),
         emonat = unclass(emonat),
         spell = unclass(spell),
-        
+
         # housing characteristics
         baujahr = unclass(baujahr),
         wohnflaeche = unclass(wohnflaeche),
@@ -87,7 +87,7 @@ red <- red |>
         hits_gen = unclass(hits_gen),
         liste_show_gen = unclass(liste_show_gen),
         liste_match_gen = unclass(liste_match_gen),
-        
+
         # geographic characteristics
         amr = unclass(erg_amd),
         kid2019 = unclass(kid2019),
