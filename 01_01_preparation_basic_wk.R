@@ -276,7 +276,8 @@ red$objektzustand[is.na(red$objektzustand)] <- 7
 # set floor to median value
 red$etage[is.na(red$etage)] <- median(red$etage, na.rm = TRUE)
 
-# age ---------------------------------------------------------------------
+#----------------------------------------------
+# age
 # construct a variables which specifies the age of the building
 red$alter <- NA
 red$alter <- red$ejahr - red$baujahr
