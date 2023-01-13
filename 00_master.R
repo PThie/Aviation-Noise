@@ -22,6 +22,7 @@ suppressPackageStartupMessages(
         library(scales)
         library(MetBrewer)
         library(tidyr)
+        library(qs)
     }
 )
 
@@ -30,13 +31,14 @@ suppressPackageStartupMessages(
 ################################################################
 
 immo_version <- "v7.1"
+utmcrs <- 32632
 
 ################################################################
 # Path Specification                                           #
 ################################################################
 
 # directory
-main_path <- "N:/Corona_FDZ/Fluglaerm_PT/"
+main_path <- "N:/Corona_FDZ/Fluglaerm_PT"
 # airport related data and general data storage
 data_path <- file.path(main_path, "data")
 # source of the RED data
