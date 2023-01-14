@@ -512,7 +512,7 @@ red_geo <- rbind(
 qs::qsave(
     red_geo,
     file.path(
-        dataFlug,
-        "housing/WK_prepared.qs"
+        data_path,
+        "housing/HK_prepared.qs"
     )
 )

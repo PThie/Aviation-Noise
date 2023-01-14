@@ -2,104 +2,121 @@
 # load data                                                   #
 ###############################################################
 
-red_org <- haven::read_dta(file.path(dataImmo, "WM_allVersions_ohneText.dta"))
+# housing data
+red_org <- haven::read_dta(
+    file.path(
+        data_immo, "WM_allVersions_ohneText.dta"
+    )
+)
 
 
-# regional info (regional centers settlement density, and  regional types)
-regional_types <- read.fst(file.path(dataFlug, "raumtyp/raumtyp_siedlungsdicht_nach_gemeinde_prep.fst"))
-regional_center <- readRDS(file.path(dataFlug, "raumzentren/raumzentren_nach_gemeinde_prep.rds"))
+# # regional info (regional centers settlement density, and  regional types)
+# regional_types <- read.fst(file.path(dataFlug, "raumtyp/raumtyp_siedlungsdicht_nach_gemeinde_prep.fst"))
+# regional_center <- readRDS(file.path(dataFlug, "raumzentren/raumzentren_nach_gemeinde_prep.rds"))
 
-# railroad noise
-rail_noise <- st_read(file.path(dataFlug, "umgebungslaerm/schiene/Basisdaten/Mrail_Source_17.shp"))
+# # railroad noise
+# rail_noise <- st_read(file.path(dataFlug, "umgebungslaerm/schiene/Basisdaten/Mrail_Source_17.shp"))
 
-# industrial noise
-industry_noise <- st_read(file.path(dataFlug, "umgebungslaerm/industrie/Ballungsraeume/Lden/Aggind_Lden_17.shp"))
+# # industrial noise
+# industry_noise <- st_read(file.path(dataFlug, "umgebungslaerm/industrie/Ballungsraeume/Lden/Aggind_Lden_17.shp"))
 
-# street noise
-streets <- st_read(file.path(dataFlug, "umgebungslaerm/strasse/Hauptverkehrsstrassen/Basisdaten/Mroad_Source_17.shp"))
+# # street noise
+# streets <- st_read(file.path(dataFlug, "umgebungslaerm/strasse/Hauptverkehrsstrassen/Basisdaten/Mroad_Source_17.shp"))
 
-
-# airports ----------------------------------------------------------------
+#----------------------------------------------
 # airport locations
-airports_loc <- read.xlsx(file.path(dataFlug, "Flughaefen/flughaefen_loc/flughaefen_germany_prepared.xlsx"), sheet = 1)
+airport_locations <- qs::qread(
+    file.path(
+        data_path,
+        "Flughaefen/airport_locations_prep.qs"
+    )
+)
 
+#----------------------------------------------
 # noise contour
-haupt_contour <- st_read(file.path(dataFlug, "Contour_Maps/Hauptflughaefen/Mair_Lden_17.shp")) 
-haupt_contour <- st_transform(haupt_contour, crs = 32632)
-haupt_contour <- haupt_contour[, c("ICAO", "DB_Low", "DB_High", "geometry")]
 
-ball_contour <- st_read(file.path(dataFlug, "Contour_Maps/Ballungsraeume/Lden/Aggair_Lden_17.shp"))
-ball_contour <- st_transform(ball_contour, crs = 32632)
+# main airports
+haupt_contour <- qs::qread(
+    file.path(
+        data_path,
+        "Contour_Maps/main_airports_contour.qs"
+    )
+)
+
+# all airports
+air_contour <- qs::qread(
+    file.path(
+        data_path,
+        "Contour_Maps/all_airports_contour.qs"
+    )
+)
 
 ###############################################################
 # preparation                                                 #
 ###############################################################
 
 # copy (to save reload time)
-red <- red_org
+red <- as.data.frame(red_org)
 
-# main variables --------------------------------------------------------------------
-# drop irrelevant variables and adjust the format of the remaining variables
+#----------------------------------------------
+# main variables
+# drop irrelevant variables
+# adjust the format of the remaining variables
 
-red <- red %>% mutate(
-  # object characteristics
-  obid = unclass(obid),
-  mietekalt = unclass(mietekalt),
-  mietewarm = unclass(mietewarm),
-  nebenkosten = unclass(nebenkosten),
-  heizkosten = unclass(heizkosten),
-  ajahr = unclass(ajahr),
-  amonat = unclass(amonat),
-  jahr = unclass(ejahr),
-  emonat = unclass(emonat),
-  spell = unclass(spell),
-  
-  # housing characteristics
-  baujahr = unclass(baujahr),
-  wohnflaeche = unclass(wohnflaeche),
-  nutzflaeche = unclass(nutzflaeche),
-  zimmeranzahl = unclass(zimmeranzahl),
-  badezimmer = unclass(badezimmer),
-  aufzug = unclass(aufzug),
-  gaestewc = unclass(gaestewc),
-  keller = unclass(keller),
-  bauphase = unclass(bauphase),
-  ausstattung = unclass(ausstattung),
-  heizungsart = unclass(heizungsart),
-  objektzustand = unclass(objektzustand),
-  etage = unclass(etage),
-  schlafzimmer = unclass(schlafzimmer),
-  aufzug = unclass(aufzug),
-  balkon = unclass(balkon),
-  einbaukueche = unclass(einbaukueche),
-  garten = unclass(garten),
-  kategorie_Wohnung = unclass(kategorie_Wohnung),
-  
-  # geographic characteristics
-  amr = unclass(erg_amd),
-  kid2019 = unclass(kid2019),
-  kid2019_gen = unclass(kid2019_gen),
-  r1_id = unclass(ergg_1km),
-  blid = unclass(blid),
-  gid2019 = unclass(gid2019),
-  gid2019_gen = unclass(gid2019_gen),
-  plz = unclass(plz),
-  lat_gps = unclass(lat_gps),
-  lon_gps = unclass(lon_gps),
-  
-  
-  .keep = "none")
+red <- red |>
+    mutate(
+        # object characteristics
+        obid = unclass(obid),
+        mietekalt = unclass(mietekalt),
+        nebenkosten = unclass(nebenkosten),
+        heizkosten = unclass(heizkosten),
+        ajahr = unclass(ajahr),
+        amonat = unclass(amonat),
+        ejahr = unclass(ejahr),
+        emonat = unclass(emonat),
+        spell = unclass(spell),
 
+        # housing characteristics
+        baujahr = unclass(baujahr),
+        wohnflaeche = unclass(wohnflaeche),
+        nutzflaeche = unclass(nutzflaeche),
+        zimmeranzahl = unclass(zimmeranzahl),
+        badezimmer = unclass(badezimmer),
+        ausstattung = unclass(ausstattung),
+        heizungsart = unclass(heizungsart),
+        objektzustand = unclass(objektzustand),
+        etage = unclass(etage),
+        balkon = unclass(balkon),
+        einbaukueche = unclass(einbaukueche),
+        garten = unclass(garten),
 
-# duplicates --------------------------------------------------------------------
+        # geographic characteristics
+        amr = unclass(erg_amd),
+        kid2019 = unclass(kid2019),
+        r1_id = unclass(ergg_1km),
+        blid = unclass(blid),
+        gid2019 = unclass(gid2019),
+        plz = unclass(plz),
+        lat_gps = unclass(lat_gps),
+        lon_gps = unclass(lon_gps),
+        .keep = "none"
+    )
+
+#----------------------------------------------
 # remove duplicates and use the last spell
 
-red$n <- ave(1:length(red$obid), red$obid, FUN = length)
+red$n <- ave(
+    1:length(red$obid),
+    red$obid,
+    FUN = length
+)
 
-red <- red[red$n == red$spell, ] 
+red <- red[red$n == red$spell, ]
 
+# check if it worked (should be zero)
 sum(duplicated(red$obid))
 
+# remove aux variable
 red$n <- NULL
 red$spell <- NULL
 
@@ -113,29 +130,40 @@ red <- red[red$ajahr >= 2018, ]
 # prepare independent variables                               #
 ###############################################################
 
-# mietekalt ---------------------------------------------------------------
+#----------------------------------------------
+# sales price
+# restrict kaufpreis to reasonable range
 red$mietekalt[red$mietekalt < 0] <- NA
 
-breaks_quantile <- as.numeric(quantile(red$mietekalt, c(0.01, 0.99), na.rm = TRUE))
+breaks_quantile <- as.numeric(
+    quantile(red$mietekalt, c(0.01, 0.99), na.rm = TRUE)
+)
 breaks_quantile
 
 # excluding values lower the 1% percentile and larger than the 99% percentile
-red <- red[(red$mietekalt >= breaks_quantile[1] & red$mietekalt <= breaks_quantile[2]),]
+red <- red[
+    (red$mietekalt >= breaks_quantile[1] & red$mietekalt <= breaks_quantile[2]),
+]
 
-
-# wohnflaeche -------------------------------------------------------------
+#----------------------------------------------
+# living space
 # restrict to reasonable range
 red$wohnflaeche[red$wohnflaeche < 0] <- NA
 
-breaks_quantile <- as.numeric(quantile(red$wohnflaeche, c(0.01, 0.99), na.rm = TRUE))
+breaks_quantile <- as.numeric(
+    quantile(red$wohnflaeche, c(0.01, 0.99), na.rm = TRUE)
+)
 breaks_quantile
 
-red <- red[red$wohnflaeche >= breaks_quantile[1] & red$wohnflaeche <= breaks_quantile[2], ]
+red <- red[
+    red$wohnflaeche >= breaks_quantile[1] & red$wohnflaeche <= breaks_quantile[2],
+]
 
 # creating a squared version
 red$wohnflaeche_squ <- red$wohnflaeche^2
 
-# dummy for first occupancy -----------------------------------------------
+#----------------------------------------------
+# dummy for first occupancy
 red$first_occupancy <- 0
 red$first_occupancy[red$objektzustand == 1] <- 1
 
@@ -147,57 +175,61 @@ red$baujahr[red$baujahr <= 0] <- NA
 # redefine baujahr if < 1500 (because unrealistic value)
 red$baujahr[red$baujahr < 1500] <- 0
 
+#----------------------------------------------
+# construction year
 
-# baujahr categories ------------------------------------------------------
-red$baujahr_cat <- NA # unknown values (including missings)
-red$baujahr_cat[red$baujahr > 0 & red$baujahr <= 1900] <- 1 # before 1900
-red$baujahr_cat[red$baujahr >= 1901 & red$baujahr <= 1945] <- 2 # 1900-1945
-red$baujahr_cat[red$baujahr >= 1946 & red$baujahr <= 1959] <- 3 # 1946-1959
-red$baujahr_cat[red$baujahr >= 1960 & red$baujahr <= 1969] <- 4 # 1960-1969
-red$baujahr_cat[red$baujahr >= 1970 & red$baujahr <= 1979] <- 5 # 1970-1979
-red$baujahr_cat[red$baujahr >= 1980 & red$baujahr <= 1989] <- 6 # 1980-1989
-red$baujahr_cat[red$baujahr >= 1990 & red$baujahr <= 1999] <- 7 # 1990-1999
-red$baujahr_cat[red$baujahr >= 2000 & red$baujahr <= 2009] <- 8 # 2000-2009
-red$baujahr_cat[red$baujahr >= 2010] <- 9 # 2010-2020
+# redefine baujahr if < 1500 (because unrealistic value)
+red$baujahr[red$baujahr <= 0] <- NA
 
+# redefine baujahr if < 1500 (because unrealistic value)
+red$baujahr[red$baujahr < 1500] <- NA
 
-# im bau ------------------------------------------------------------------
-# construct dummy which is equal to one if the building is under construction (2 == bauphase)
-red$in_bau <- if_else(red$bauphase == 2, true = 1, false = 0, missing = NULL)
-
-
-# kreis ID ----------------------------------------------------------------
+#----------------------------------------------
+# district ID
 # reassign the missings in kid2019
-red$kid2019_gen[is.na(red$kid2019_gen)] <- 0
+red$kid2019[is.na(red$kid2019)] <- 0
 
 # dropping those variables where you dont have a Kreis ID
-red <- red[red$kid2019_gen > 0, ]
+red <- red[red$kid2019 > 0, ]
 
 
-# balkon ------------------------------------------------------------------
+#----------------------------------------------
+# balcony
 red$balkon[red$balkon < 0] <- 0
 
-
-# garten ------------------------------------------------------------------
+#----------------------------------------------
+# garden
 red$garten[red$garten < 0] <- 0
 
-
-# einbaukueche ------------------------------------------------------------
+#----------------------------------------------
+# built-in kitchen
 red$einbaukueche[red$einbaukueche < 0] <- 0
 
-
-# missing values ----------------------------------------------------------
+#----------------------------------------------
 # re-assign the remaining missing values
 red[red < 0] <- NA
 
-# date --------------------------------------------------------------------
-# constructing date variable (year and month)
+#----------------------------------------------
+# constructing date variables (year and month)
+
 # starting date
-red$date <- ymd(paste(red$ajahr, red$amonat, "01", sep = "-"))
-red$year_mon <- format(as.Date(red$date), "%Y-%m")
+red$start_date <- ymd(
+    paste(red$ajahr, red$amonat, "01", sep = "-")
+)
+red$year_mon_start <- format(
+    as.Date(red$start_date), "%Y-%m"
+)
 
+# ending date
+red$end_date <- ymd(
+    paste(red$ejahr, red$emonat, "01", sep = "-")
+)
+red$year_mon_end <- format(
+    as.Date(red$end_date), "%Y-%m"
+)
 
-# UNBEKANNT values --------------------------------------------------------
+#----------------------------------------------
+# construct dummies for unknown values
 red$etageUNBEKANNT <- 0
 red$etageUNBEKANNT[is.na(red$etage)] <- 1
 
@@ -210,12 +242,6 @@ red$balkonUNBEKANNT[is.na(red$balkon)] <- 1
 red$gartenUNBEKANNT <- 0
 red$gartenUNBEKANNT[is.na(red$garten)] <- 1
 
-red$kategorie_WohnungUNBEKANNT <- 0
-red$kategorie_WohnungUNBEKANNT[is.na(red$kategorie_Wohnung)] <- 1
-
-red$aufzugUNBEKANNT <- 0
-red$aufzugUNBEKANNT[is.na(red$aufzug)] <- 1
-
 red$baujahr_catUNBEKANNT <- 0
 red$baujahr_catUNBEKANNT[is.na(red$baujahr)] <- 1
 
@@ -224,15 +250,6 @@ red$nutzflaecheUNBEKANNT[is.na(red$nutzflaeche)] <- 1
 
 red$badezimmerUNBEKANNT <- 0
 red$badezimmerUNBEKANNT[is.na(red$badezimmer)] <- 1
-
-red$gaestewcUNBEKANNT <- 0
-red$gaestewcUNBEKANNT[is.na(red$gaestewc)] <- 1
-
-red$kellerUNBEKANNT <- 0
-red$kellerUNBEKANNT[is.na(red$keller)] <- 1
-
-red$bauphaseUNBEKANNT <- 0
-red$bauphaseUNBEKANNT[is.na(red$bauphase)] <- 1
 
 red$ausstattungUNBEKANNT <- 0
 red$ausstattungUNBEKANNT[is.na(red$ausstattung)] <- 1
@@ -243,21 +260,29 @@ red$heizungsartUNBEKANNT[is.na(red$heizungsart)] <- 1
 red$objektzustandUNBEKANNT <- 0
 red$objektzustandUNBEKANNT[is.na(red$objektzustand)] <- 1
 
-
-# reassigning missing values ----------------------------------------------
-# main idea: when there is no value then it simply was not specified because there is no such feature or just one (e.g. number of bathrooms)
+#----------------------------------------------
+# reassigning missing values
+# main idea: when there is no value then it simply was not specified because
+#  there is no such feature or just one (e.g. number of bathrooms)
 
 red$nutzflaeche[is.na(red$nutzflaeche)] <- 0
-red$badezimmer[is.na(red$badezimmer)] <- 1 # implausible that a house does not have a bathroom
-red$ausstattung[is.na(red$ausstattung)] <- 2 # assume "normal" ausstattung if not further specified
-red$heizungsart[is.na(red$heizungsart)] <- 13 # assume central heating (Zentralheizung) if not further specified (most comman type of heating)
-red$objektzustand[is.na(red$objektzustand)] <- 7 # assume "gepflegt"
+# implausible that a house does not have a bathroom
+red$badezimmer[is.na(red$badezimmer)] <- 1
+# assume "normal" ausstattung if not further specified
+red$ausstattung[is.na(red$ausstattung)] <- 2
+# assume central heating (Zentralheizung) if not further specified
+# (most comman type of heating)
+red$heizungsart[is.na(red$heizungsart)] <- 13
+# assume "gepflegt"
+red$objektzustand[is.na(red$objektzustand)] <- 7
+# set floor to median value
 red$etage[is.na(red$etage)] <- median(red$etage, na.rm = TRUE)
 
-# age ---------------------------------------------------------------------
+#----------------------------------------------
+# age
 # construct a variables which specifies the age of the building
 red$alter <- NA
-red$alter <- red$jahr - red$baujahr
+red$alter <- red$ejahr - red$baujahr
 red$alter[red$alter <= 0] <- NA
 
 # if age us unknown specfied as median age
@@ -275,17 +300,17 @@ red$alterUNBEKANNT[is.na(red$alter)] <- 1
 # prepare dependent variables                                 #
 ###############################################################
 
-
-# rent log -----------------------------------------------------------
+#----------------------------------------------
+# rent log
 red$ln_mietekalt <- log(red$mietekalt)
-
 
 # rent per square meter ---------------------------------------------------
 red$rent_sqmeter <- red$mietekalt / red$wohnflaeche
 
-
 # log rent per square meter -----------------------------------------------
 red$ln_rent_sqmeter <- log(red$rent_sqmeter)
+
+# CONTINUE here
 
 ###############################################################
 # prepare coordinates                                         #
