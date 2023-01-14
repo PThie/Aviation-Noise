@@ -167,13 +167,14 @@ red$wohnflaeche_squ <- red$wohnflaeche^2
 red$first_occupancy <- 0
 red$first_occupancy[red$objektzustand == 1] <- 1
 
+#----------------------------------------------
+# construction year
 
-# baujahr -----------------------------------------------------------------
 # redefine baujahr if < 1500 (because unrealistic value)
 red$baujahr[red$baujahr <= 0] <- NA
 
 # redefine baujahr if < 1500 (because unrealistic value)
-red$baujahr[red$baujahr < 1500] <- 0
+red$baujahr[red$baujahr < 1500] <- NA
 
 #----------------------------------------------
 # construction year
@@ -191,7 +192,6 @@ red$kid2019[is.na(red$kid2019)] <- 0
 
 # dropping those variables where you dont have a Kreis ID
 red <- red[red$kid2019 > 0, ]
-
 
 #----------------------------------------------
 # balcony
@@ -310,8 +310,6 @@ red$rent_sqmeter <- red$mietekalt / red$wohnflaeche
 # log rent per square meter -----------------------------------------------
 red$ln_rent_sqmeter <- log(red$rent_sqmeter)
 
-# CONTINUE here
-
 ###############################################################
 # prepare coordinates                                         #
 ###############################################################
@@ -322,202 +320,187 @@ red_geo <- red_geo[!is.na(red_geo$lat_gps), ]
 red_geo <- red_geo[!is.na(red_geo$lon_gps), ]
 
 # define as sf
-red_geo <- st_as_sf(red_geo, coords = c("lon_gps", "lat_gps"), crs = 4326, remove = FALSE)
-red_geo <- st_transform(red_geo, crs = 32632)
+red_geo <- st_as_sf(
+    red_geo,
+    coords = c("lon_gps", "lat_gps"),
+    crs = 4326,
+    remove = FALSE
+)
+red_geo <- st_transform(
+    red_geo,
+    crs = utmcrs
+)
+
+# CONTINUE:
+# Put in different file
 
 ###############################################################
 # additional controls                                         #
 ###############################################################
 
-# create AGS with zeros
-red_geo$AGS_gem <- as.character(red_geo$gid2019_gen)
-red_geo$AGS_gem <- ifelse(nchar(red_geo$AGS_gem) == 7,
-                          yes = paste0(0, red_geo$AGS_gem),
-                          no = paste0(red_geo$AGS_gem))
+# # create AGS with zeros
+# red_geo$AGS_gem <- as.character(red_geo$gid2019_gen)
+# red_geo$AGS_gem <- ifelse(nchar(red_geo$AGS_gem) == 7,
+#                           yes = paste0(0, red_geo$AGS_gem),
+#                           no = paste0(red_geo$AGS_gem))
 
-red_geo$AGS_gem[red_geo$AGS_gem == "2e+06"] <- "02000000"
-red_geo$AGS_gem[red_geo$AGS_gem == "01.1e+07"] <- "11000000"
+# red_geo$AGS_gem[red_geo$AGS_gem == "2e+06"] <- "02000000"
+# red_geo$AGS_gem[red_geo$AGS_gem == "01.1e+07"] <- "11000000"
 
-# -------------------------------------------------------------------------
-# regional types
-regional_types$municipality <- NULL
-regional_types$settlement_density <- NULL
-red_geo <- merge(red_geo, regional_types, by.x = "AGS_gem", by.y = "ags", all.x = TRUE)
-
-
-# -------------------------------------------------------------------------
-# regional center
-regional_center <- st_set_geometry(regional_center, regional_center$geometry)
-regional_center <- st_transform(regional_center, crs = 32632)
-regional_center <- regional_center[!st_is_empty(regional_center$geometry), ]
-
-# subset for large center (Oberzentrum == 1)
-largcenter <- regional_center[regional_center$center_identifier == 1, ]
-
-# subset for medium center (Mittelzentrum == 2)
-medcenter <- regional_center[regional_center$center_identifier == 2, ]
-
-# subset for small center (Grundzentrum == 3)
-smalcenter <- regional_center[regional_center$center_identifier == 3, ]
+# # -------------------------------------------------------------------------
+# # regional types
+# regional_types$municipality <- NULL
+# regional_types$settlement_density <- NULL
+# red_geo <- merge(red_geo, regional_types, by.x = "AGS_gem", by.y = "ags", all.x = TRUE)
 
 
-# -------------------------------------------------------------------------
-# distances regional centers
+# # -------------------------------------------------------------------------
+# # regional center
+# regional_center <- st_set_geometry(regional_center, regional_center$geometry)
+# regional_center <- st_transform(regional_center, crs = 32632)
+# regional_center <- regional_center[!st_is_empty(regional_center$geometry), ]
 
-# add distance to closest center to housing
-red_geo$distance_largcenter <- as.numeric(apply(st_distance(red_geo, largcenter), 1, min)) / 1000 # to get kilometers
-red_geo$distance_medcenter <- as.numeric(apply(st_distance(red_geo, medcenter), 1, min)) / 1000 # to get kilometers
-red_geo$distance_smalcenter <- as.numeric(apply(st_distance(red_geo, smalcenter), 1, min)) / 1000 # to get kilometers
+# # subset for large center (Oberzentrum == 1)
+# largcenter <- regional_center[regional_center$center_identifier == 1, ]
 
-# -------------------------------------------------------------------------
-# distance to airport building
+# # subset for medium center (Mittelzentrum == 2)
+# medcenter <- regional_center[regional_center$center_identifier == 2, ]
 
-##### prepare
-
-# keep only variables of interest
-airports_loc <- airports_loc %>% select("name", "city", "ICAO_code", "longitude", "latitude", "mainair")
-
-# select main airports
-main_airports <- airports_loc %>% filter(mainair == 1)
-
-# drop those that are not main airports in the analysis
-main_airports <- main_airports %>% filter(ICAO_code == "EDDS" |
-                                            ICAO_code == "EDDN" |
-                                            ICAO_code == "EDDL" |
-                                            ICAO_code == "EDDT" |
-                                            ICAO_code == "EDDV" |
-                                            ICAO_code == "EDDB" |
-                                            ICAO_code == "EDDP" |
-                                            ICAO_code == "EDDF" |
-                                            ICAO_code == "EDDK" |
-                                            ICAO_code == "EDDH" |
-                                            ICAO_code == "EDDM")
+# # subset for small center (Grundzentrum == 3)
+# smalcenter <- regional_center[regional_center$center_identifier == 3, ]
 
 
-# select those that are airports in agglomeration areas
-agg_airports <- airports_loc %>% filter(ICAO_code == "EDLE" |
-                                          ICAO_code == "EDFM" |
-                                          ICAO_code == "EDLW" |
-                                          ICAO_code == "EDDW" |
-                                          ICAO_code == "EDFZ" |
-                                          ICAO_code == "EDDC")
+# # -------------------------------------------------------------------------
+# # distances regional centers
 
-# make sf and transform crs
-main_airports <- st_as_sf(main_airports, coords = c("longitude", "latitude"), crs = 4326)
-main_airports <- st_transform(main_airports, crs = 32632)
+# # add distance to closest center to housing
+# red_geo$distance_largcenter <- as.numeric(apply(st_distance(red_geo, largcenter), 1, min)) / 1000 # to get kilometers
+# red_geo$distance_medcenter <- as.numeric(apply(st_distance(red_geo, medcenter), 1, min)) / 1000 # to get kilometers
+# red_geo$distance_smalcenter <- as.numeric(apply(st_distance(red_geo, smalcenter), 1, min)) / 1000 # to get kilometers
 
-agg_airports <- st_as_sf(agg_airports, coords = c("longitude", "latitude"), crs = 4326)
-agg_airports <- st_transform(agg_airports, crs = 32632)
+# NOTE: I continued here
 
-# define all airports
-airports <- rbind(main_airports, agg_airports)
+###############################################################
+# distance to airport building                                #
+###############################################################
 
-##### distance
+main_airports <- airport_locations |>
+    filter(mainair == 1)
 
-# add distance to closest center to housing
-red_geo$distance_main_airports_building <- as.numeric(apply(st_distance(red_geo, main_airports), 1, min)) / 1000 # to get kilometers
-red_geo$distance_all_airports_building <- as.numeric(apply(st_distance(red_geo, airports), 1, min)) / 1000 # to get kilometers
+# add distance to closest main airport (in km)
+red_geo$distance_main_airports_building <- as.numeric(
+    apply(st_distance(red_geo, main_airports), 1, min)
+) / 1000
 
-# -------------------------------------------------------------------------
-# split up data to make distance calculates faster (for industry and railroad noise)
+# add distance to the closest airport in general
+red_geo$distance_all_airports_building <- as.numeric(
+    apply(st_distance(red_geo, airport_locations), 1, min)
+) / 1000
 
-red_geo1 <- red_geo %>% filter(ajahr == 2018)
-red_geo2 <- red_geo %>% filter(ajahr == 2019)
-red_geo3 <- red_geo %>% filter(ajahr == 2020)
-red_geo4 <- red_geo %>% filter(ajahr == 2021)
+###############################################################
+# add closest airport based on shape                          #
+###############################################################
 
-
-# -------------------------------------------------------------------------
-# distance to airports
-
-##### prepare
-
-# add ICAO to additional airports
-ball_contour$ICAO <- NA
-ball_contour$ICAO[ball_contour$Agglomerat == "Essen"] <- "EDLE"
-ball_contour$ICAO[ball_contour$Agglomerat == "Mülheim an der Ruhr"] <- "EDLE"
-ball_contour$ICAO[ball_contour$Agglomerat == "Mannheim"] <- "EDFM"
-ball_contour$ICAO[ball_contour$Agglomerat == "Dortmund"] <- "EDLW"
-ball_contour$ICAO[ball_contour$Agglomerat == "Bremen"] <- "EDDW"
-ball_contour$ICAO[ball_contour$Agglomerat == "Mainz"] <- "EDFZ"
-ball_contour$ICAO[ball_contour$Agglomerat == "Dresden"] <- "EDDC"
-
-ball_contour <- ball_contour[, c("ICAO", "DB_Low", "DB_High", "geometry")]
-
-# identifier for main airports
-haupt_contour$main_airport <- 1
-ball_contour$main_airport <- 0
-
-# combine both airport "types"
-airport_contour <- rbind(haupt_contour, ball_contour)
-
+#----------------------------------------------
 # make union
-main_airports_union <- haupt_contour %>% group_by(ICAO) %>% summarise(geometry = st_union(geometry))
-airports_union <- airport_contour %>% group_by(ICAO) %>% summarise(geometry = st_union(geometry))
 
+# for main airports
+main_airports_union <- haupt_contour |>
+    group_by(icao) |>
+    summarise(geometry = st_union(geometry))
 
-##### function to calculate distance
-air_noise_distance <- function(data.sf){
-  
-  # identify nearest airport
-  ordering_main_airports <- apply(st_distance(data.sf, main_airports_union), 1, which.min)
-  ordering_all_airports <- apply(st_distance(data.sf, airports_union), 1, which.min)
-  
-  data.sf$closest_main_airports <- main_airports_union$ICAO[ordering_main_airports]
-  data.sf$closest_all_airports <- airports_union$ICAO[ordering_all_airports]
-  
-  # add distance to closest center to housing
-  data.sf$distance_main_airports <- as.numeric(apply(st_distance(data.sf, main_airports_union), 1, min)) / 1000 # to get kilometers
-  data.sf$distance_all_airports <- as.numeric(apply(st_distance(data.sf, airports_union), 1, min)) / 1000 # to get kilometers
-  
-  # return
-  return(data.sf)
+# for all airports
+airports_union <- air_contour |>
+    group_by(icao) |>
+    summarise(geometry = st_union(geometry))
+
+#----------------------------------------------
+# distance to nearest shape
+
+# function to calculate distance
+air_noise_distance <- function(data_sf) {
+    # identify nearest airport
+    ordering_main_airports <- apply(
+        st_distance(data_sf, main_airports_union), 1, which.min
+    )
+    ordering_all_airports <- apply(
+        st_distance(data_sf, airports_union), 1, which.min
+    )
+
+    # add closest airport
+    data_sf$closest_main_airports <- main_airports_union$icao[
+        ordering_main_airports
+    ]
+    data_sf$closest_all_airports <- airports_union$icao[
+        ordering_all_airports
+    ]
+
+    # add distance to closest airport shape (in km)
+    data_sf$distance_main_airports <- as.numeric(
+        apply(st_distance(data_sf, main_airports_union), 1, min)
+    ) / 1000
+    data_sf$distance_all_airports <- as.numeric(
+        apply(st_distance(data_sf, airports_union), 1, min)
+    ) / 1000
+
+    # return
+    return(data_sf)
 }
 
-##### apply function to subsets
+# split data set to make distance calculation faster
+red_geo1 <- red_geo |> filter(ajahr == 2018)
+red_geo2 <- red_geo |> filter(ajahr == 2019)
+red_geo3 <- red_geo |> filter(ajahr == 2020)
+red_geo4 <- red_geo |> filter(ajahr == 2021)
+red_geo5 <- red_geo |> filter(ajahr == 2022)
+
+# apply function to subsets
 red_geo1 <- air_noise_distance(red_geo1)
 red_geo2 <- air_noise_distance(red_geo2)
 red_geo3 <- air_noise_distance(red_geo3)
 red_geo4 <- air_noise_distance(red_geo4)
+red_geo5 <- air_noise_distance(red_geo5)
 
 # merge back together
-red_geo <- rbind(red_geo1, red_geo2, red_geo3, red_geo4)
+red_geo <- rbind(
+    red_geo1, red_geo2, red_geo3, red_geo4, red_geo5
+)
 
-# -------------------------------------------------------------------------
-# distance to industry
+# # -------------------------------------------------------------------------
+# # distance to industry
 
-industry_noise <- st_transform(industry_noise, crs = 32632)
+# industry_noise <- st_transform(industry_noise, crs = 32632)
 
-nearest_ind <- st_nearest_feature(red_geo, industry_noise)
-red_geo$distance_industry <- as.numeric(st_distance(red_geo, industry_noise[nearest_ind, ], by_element = TRUE) / 1000)
-
-
-# distance to rail --------------------------------------------------------
-
-# transform crs
-rail_noise <- st_transform(rail_noise, crs = 32632)
-
-nearest_rail <- st_nearest_feature(red_geo, rail_noise)
-red_geo$distance_railroads <- as.numeric(st_distance(red_geo, rail_noise[nearest_rail, ], by_element = TRUE) / 1000)
+# nearest_ind <- st_nearest_feature(red_geo, industry_noise)
+# red_geo$distance_industry <- as.numeric(st_distance(red_geo, industry_noise[nearest_ind, ], by_element = TRUE) / 1000)
 
 
-# distance to streets -----------------------------------------------------
+# # distance to rail --------------------------------------------------------
 
-# transform crs
-streets <- st_transform(streets, crs = 32632)
+# # transform crs
+# rail_noise <- st_transform(rail_noise, crs = 32632)
 
-nearest <- st_nearest_feature(red_geo, streets)
-saveRDS(nearest, file.path(dataFlug, "housing/Temp/nearest_streets_wm.rds"))
-red_geo$distance_streets <- as.numeric(st_distance(red_geo, streets[nearest, ], by_element = TRUE) / 1000)
+# nearest_rail <- st_nearest_feature(red_geo, rail_noise)
+# red_geo$distance_railroads <- as.numeric(st_distance(red_geo, rail_noise[nearest_rail, ], by_element = TRUE) / 1000)
+
+
+# # distance to streets -----------------------------------------------------
+
+# # transform crs
+# streets <- st_transform(streets, crs = 32632)
+
+# nearest <- st_nearest_feature(red_geo, streets)
+# saveRDS(nearest, file.path(dataFlug, "housing/Temp/nearest_streets_wm.rds"))
+# red_geo$distance_streets <- as.numeric(st_distance(red_geo, streets[nearest, ], by_element = TRUE) / 1000)
 
 ###############################################################
 # save data                                                   #
 ###############################################################
 
-saveRDS(red_geo, file.path(dataFlug, "housing/Temp/red_WM_prepared.rds"))
-
-###############################################################
-# clear                                                       #
-###############################################################
-
-rm(list=ls())
+qs::qsave(
+    red_geo,
+    file.path(
+        data_path,
+        "housing/WM_prepared.qs"
+    )
+)
