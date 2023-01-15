@@ -3,22 +3,15 @@
 ################################################################
 
 # load WK data
-red <- readRDS(file.path(dataFlug, "housing/Temp/red_WK_prepared.rds"))
-
-# load contour maps
-haupt_contour <- st_read(file.path(dataFlug, "Contour_Maps/Hauptflughaefen/Mair_Lden_17.shp")) 
-haupt_contour <- st_transform(haupt_contour, crs = 32632)
-haupt_contour <- haupt_contour[, c("ICAO", "DB_Low", "DB_High", "geometry")]
-
-ball_contour <- st_read("N:/Corona_FDZ/Fluglaerm_PT/Daten/Contour_Maps/Ballungsraeume/Lden/Aggair_Lden_17.shp")
-ball_contour <- st_transform(ball_contour, crs = 32632)
+red <- qs::qread(
+    file.path(
+        data_path, "housing/WK_prepared.qs"
+    )
+)
 
 # geo info
 krs <- st_read(file.path(dataGebiete, "Kreis/2019/VG250_KRS.shp"))
 gem <- st_read(file.path(dataGebiete, "Gemeinde/2019/VG250_GEM.shp"))
-
-# load intersection function
-source(file.path(codePath, "functions/intersection_function.Rd"))
 
 ################################################################
 # Preparation                                                  #

@@ -61,6 +61,18 @@ output_path <- file.path(main_path, "Auswertung/output")
 
 setwd(main_path)
 
+################################################################
+# Global functions                                             #
+################################################################
+
+# intersection function
+source(
+    file.path(
+        code_path,
+        "functions/intersection_function.Rd"
+    )
+)
+
 # TODO: Needs rework (was never complete)
 ################################################################
 # Preparation Files                                            #
