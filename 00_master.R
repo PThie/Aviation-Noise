@@ -23,6 +23,7 @@ suppressPackageStartupMessages(
         library(MetBrewer)
         library(tidyr)
         library(qs)
+        library(docstring)
     }
 )
 
@@ -69,7 +70,7 @@ setwd(main_path)
 source(
     file.path(
         code_path,
-        "functions/intersection_function.Rd"
+        "functions/intersection_function.R"
     )
 )
 
