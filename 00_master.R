@@ -2,6 +2,15 @@
 # load libraries                                              #
 ###############################################################
 
+# install.packages(
+#     c(
+#         "dplyr", "data.table", "sf", "zoo", "ggplot2",
+#         "readxl", "fixest", "sp", "gstat", "tmap",
+#         "psych", "openxlsx", "fst", "lemon", "lubridate",
+#         "scales", "MetBrewer", "tidyr", "qs", "docstring"
+#     )
+# )
+
 suppressPackageStartupMessages(
     {
         library(dplyr)
