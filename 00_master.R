@@ -8,7 +8,7 @@
 #         "readxl", "fixest", "sp", "gstat", "tmap",
 #         "psych", "openxlsx", "fst", "lemon", "lubridate",
 #         "scales", "MetBrewer", "tidyr", "qs", "docstring",
-#         "jsonlite", "haven"
+#         "jsonlite", "haven", "stringr", "ggmap", "cartography"
 #     )
 # )
 
@@ -34,6 +34,9 @@ suppressPackageStartupMessages(
         library(tidyr)
         library(qs)
         library(docstring)
+        library(stringr)
+        library(ggmap)
+        library(cartography)
     }
 )
 
@@ -43,6 +46,21 @@ suppressPackageStartupMessages(
 
 immo_version <- "v7.1"
 utmcrs <- 32632
+owndpi <- 800
+
+# ggplot theme (line graphs)
+owntheme <- theme(
+    axis.text.x = element_text(size = 14, angle = 45, hjust = 1),
+    axis.title.x = element_blank(),
+    axis.title.y = element_text(size = 17, vjust = 2),
+    axis.text.y = element_text(size = 15),
+    panel.background = element_rect(colour = "white", fill = "white"),
+    axis.line = element_line(linewidth = 0.5, linetype = "solid", color = "black"),
+    legend.key.size = unit(1, "cm"),
+    legend.text = element_text(size = 11),
+    axis.ticks.length = unit(0.25, "cm"),
+    legend.key = element_blank()
+)
 
 ################################################################
 # Path Specification                                           #
@@ -90,6 +108,14 @@ source(
     file.path(
         code_path,
         "functions/housing_cont.R"
+    )
+)
+
+# preparation data for estimation
+source(
+    file.path(
+        code_path,
+        "functions/prep_est.R"
     )
 )
 

@@ -2,488 +2,412 @@
 # load data                                                   #
 ###############################################################
 
-# load airport locations
-airports <- read_excel(file.path(dataFlug, "Flughaefen/flughaefen_loc/flughaefen_germany_prepared.xlsx"))
+#----------------------------------------------
+# housing data
+housing_wk <- qs::qread(
+    file.path(
+        data_path, "housing/WK_complete.qs"
+    )
+)
 
+#----------------------------------------------
+# airport locations
+airport_locations <- qs::qread(
+    file.path(
+        data_path,
+        "Flughaefen/airport_locations_prep.qs"
+    )
+)
+
+#----------------------------------------------
 # load state boundaries
-bula <- st_read(file.path(dataGebiete, "Bundesland/2019/VG250_LAN.shp"))
-bula <- st_transform(bula, crs = 32632)
+bula <- st_read(
+    file.path(
+        data_gebiete, "Bundesland/2019/VG250_LAN.shp"
+    ),
+    quiet = TRUE
+)
+bula <- st_transform(bula, crs = utmcrs)
 
-# load contour maps
-haupt_contour <- st_read(file.path(dataFlug, "Contour_Maps/Hauptflughaefen/Mair_Lden_17.shp")) 
-haupt_contour <- st_transform(haupt_contour, crs = 32632)
-haupt_contour <- haupt_contour[, c("ICAO", "DB_Low", "DB_High", "geometry")]
+#----------------------------------------------
+# noise contour
 
-ball_contour <- st_read(file.path(dataFlug, "Contour_Maps/Ballungsraeume/Lden/Aggair_Lden_17.shp"))
-ball_contour <- st_transform(ball_contour, crs = 32632)
-
-# load property data
-wk <- readRDS(file.path(dataFlug, "housing/wk_contour.rds"))
-#hk <- readRDS(file.path(dataFlug, "housing/hk_contour.rds"))
-
-# -------------------------------------------------------------------------
-# load noise data
-# Duesseldorf -------------------------------------------------------------
-dus19 <- haven::read_dta(file.path(dataFlug, "Hauptflughaefen_Laerm/Duesseldorf/dus_complete_merged_2019.dta"))
-dus20 <- haven::read_dta(file.path(dataFlug, "Hauptflughaefen_Laerm/Duesseldorf/dus_complete_merged.dta"))
-
-# Frankfurt ---------------------------------------------------------------
-fra18 <- haven::read_dta(file.path(dataFlug, "Hauptflughaefen_Laerm/Frankfurt/fra_complete_merged_2018.dta"))
-fra19 <- haven::read_dta(file.path(dataFlug, "Hauptflughaefen_Laerm/Frankfurt/fra_complete_merged_2019.dta"))
-fra20 <- haven::read_dta(file.path(dataFlug, "Hauptflughaefen_Laerm/Frankfurt/fra_complete_merged.dta"))
-fra21 <- haven::read_dta(file.path(dataFlug, "Hauptflughaefen_Laerm/Frankfurt/fra_complete_merged_2021.dta"))
-
-# Hamburg -----------------------------------------------------------------
-ham19 <- haven::read_dta(file.path(dataFlug, "Hauptflughaefen_Laerm/Hamburg/ham_complete_merged_2019.dta"))
-ham20 <- haven::read_dta(file.path(dataFlug, "Hauptflughaefen_Laerm/Hamburg/ham_complete_merged.dta"))
-
-# Hannover ----------------------------------------------------------------
-haj18 <- haven::read_dta(file.path(dataFlug, "Hauptflughaefen_Laerm/Hannover/haj_complete_merged_2018.dta"))
-haj19 <- haven::read_dta(file.path(dataFlug, "Hauptflughaefen_Laerm/Hannover/haj_complete_merged_2019.dta"))
-haj20 <- haven::read_dta(file.path(dataFlug, "Hauptflughaefen_Laerm/Hannover/haj_complete_merged.dta"))
-haj21 <- haven::read_dta(file.path(dataFlug, "Hauptflughaefen_Laerm/Hannover/haj_complete_merged_2021.dta"))
-
-# Leipzig -----------------------------------------------------------------
-lej19 <- haven::read_dta(file.path(dataFlug, "Hauptflughaefen_Laerm/Leipzig/lej_complete_merged_2019.dta"))
-lej20 <- haven::read_dta(file.path(dataFlug, "Hauptflughaefen_Laerm/Leipzig/lej_complete_merged.dta"))
-lej21 <- haven::read_dta(file.path(dataFlug, "Hauptflughaefen_Laerm/Leipzig/lej_complete_merged_2021.dta"))
-
-# Muenchen ----------------------------------------------------------------
-muc19 <- haven::read_dta(file.path(dataFlug, "Hauptflughaefen_Laerm/Muenchen/muc_complete_merged_2019.dta"))
-muc20 <- haven::read_dta(file.path(dataFlug, "Hauptflughaefen_Laerm/Muenchen/muc_complete_merged.dta"))
+# main airports
+haupt_contour <- qs::qread(
+    file.path(
+        data_path,
+        "Contour_Maps/main_airports_contour.qs"
+    )
+)
 
 
-###############################################################
-# general preparation                                         #
-###############################################################
+# # -------------------------------------------------------------------------
+# # load noise data
+# # Duesseldorf -------------------------------------------------------------
+# dus19 <- haven::read_dta(file.path(dataFlug, "Hauptflughaefen_Laerm/Duesseldorf/dus_complete_merged_2019.dta"))
+# dus20 <- haven::read_dta(file.path(dataFlug, "Hauptflughaefen_Laerm/Duesseldorf/dus_complete_merged.dta"))
 
-# prepare contour ---------------------------------------------------------
+# # Frankfurt ---------------------------------------------------------------
+# fra18 <- haven::read_dta(file.path(dataFlug, "Hauptflughaefen_Laerm/Frankfurt/fra_complete_merged_2018.dta"))
+# fra19 <- haven::read_dta(file.path(dataFlug, "Hauptflughaefen_Laerm/Frankfurt/fra_complete_merged_2019.dta"))
+# fra20 <- haven::read_dta(file.path(dataFlug, "Hauptflughaefen_Laerm/Frankfurt/fra_complete_merged.dta"))
+# fra21 <- haven::read_dta(file.path(dataFlug, "Hauptflughaefen_Laerm/Frankfurt/fra_complete_merged_2021.dta"))
 
-# add ICAO to additional airports
-ball_contour$ICAO <- NA
-ball_contour$ICAO[ball_contour$Agglomerat == "Essen"] <- "EDLE"
-ball_contour$ICAO[ball_contour$Agglomerat == "Mülheim an der Ruhr"] <- "EDLE"
-ball_contour$ICAO[ball_contour$Agglomerat == "Mannheim"] <- "EDFM"
-ball_contour$ICAO[ball_contour$Agglomerat == "Dortmund"] <- "EDLW"
-ball_contour$ICAO[ball_contour$Agglomerat == "Bremen"] <- "EDDW"
-ball_contour$ICAO[ball_contour$Agglomerat == "Mainz"] <- "EDFZ"
-ball_contour$ICAO[ball_contour$Agglomerat == "Dresden"] <- "EDDC"
+# # Hamburg -----------------------------------------------------------------
+# ham19 <- haven::read_dta(file.path(dataFlug, "Hauptflughaefen_Laerm/Hamburg/ham_complete_merged_2019.dta"))
+# ham20 <- haven::read_dta(file.path(dataFlug, "Hauptflughaefen_Laerm/Hamburg/ham_complete_merged.dta"))
 
-ball_contour <- ball_contour[, c("ICAO", "DB_Low", "DB_High", "geometry")]
+# # Hannover ----------------------------------------------------------------
+# haj18 <- haven::read_dta(file.path(dataFlug, "Hauptflughaefen_Laerm/Hannover/haj_complete_merged_2018.dta"))
+# haj19 <- haven::read_dta(file.path(dataFlug, "Hauptflughaefen_Laerm/Hannover/haj_complete_merged_2019.dta"))
+# haj20 <- haven::read_dta(file.path(dataFlug, "Hauptflughaefen_Laerm/Hannover/haj_complete_merged.dta"))
+# haj21 <- haven::read_dta(file.path(dataFlug, "Hauptflughaefen_Laerm/Hannover/haj_complete_merged_2021.dta"))
+
+# # Leipzig -----------------------------------------------------------------
+# lej19 <- haven::read_dta(file.path(dataFlug, "Hauptflughaefen_Laerm/Leipzig/lej_complete_merged_2019.dta"))
+# lej20 <- haven::read_dta(file.path(dataFlug, "Hauptflughaefen_Laerm/Leipzig/lej_complete_merged.dta"))
+# lej21 <- haven::read_dta(file.path(dataFlug, "Hauptflughaefen_Laerm/Leipzig/lej_complete_merged_2021.dta"))
+
+# # Muenchen ----------------------------------------------------------------
+# muc19 <- haven::read_dta(file.path(dataFlug, "Hauptflughaefen_Laerm/Muenchen/muc_complete_merged_2019.dta"))
+# muc20 <- haven::read_dta(file.path(dataFlug, "Hauptflughaefen_Laerm/Muenchen/muc_complete_merged.dta"))
 
 ###############################################################
 # Mapping Airports                                            #
 ###############################################################
 
 # keep only the main airports
-airports_main <- airports[airports$mainair == 1,]
+airports_main <- airport_locations |>
+    filter(mainair == 1)
 
-# keep only the airports which included in the study (11)
-airports_main <- subset(airports_main, airports_main$IATA_code == "DUS" | airports_main$IATA_code == "HAM" |
-                          airports_main$IATA_code == "MUC" | airports_main$IATA_code == "FRA" |
-                          airports_main$IATA_code == "HAJ" | airports_main$IATA_code == "LEJ" |
-                          airports_main$IATA_code == "STR" | airports_main$IATA_code == "NUE" |
-                          airports_main$IATA_code == "CGN")
-
-# keep only relevant columns
-airports_main <- airports_main[, c("name", "city", "IATA_code", "longitude", "latitude")]
-
-# rename Muenchen Airport
-airports_main$name[8] <- "München Airport"
-
-# add label
-airports_main$labels <- c("Stuttgart", "Nuremberg", "Dusseldorf", "Hannover", "Leipzig", "Frankfurt", "Cologne", "Hamburg", "Munich")
-
-# make sf
-airports_main <- st_as_sf(airports_main, coords = c("longitude", "latitude"), crs = 4326)
-airports_main <- st_transform(airports_main, crs = 32632)
-
-# plot 
-map_airports <- tm_shape(bula)+
-  tm_borders(lwd = 1, col = "gray")+
-  tm_shape(airports_main)+
-  tm_dots(size = 0.22)+
-  tm_text(text = "labels", 
-          xmod = 1,
-          ymod = -0.5,
-          fontface = "bold",
-          scale = 0.9)
-
-map_airports
-tmap_save(map_airports, file = file.path(outputPath, "graphs/map_airport_locations.png"))
-
-
-# plot main and agglomeration airports ------------------------------------
-
-# select airports in agglomeration areas
-airports_agg <- airports %>% filter(ICAO_code == "EDLE" |
-                                      ICAO_code == "EDFM" |
-                                      ICAO_code == "EDLW" |
-                                      ICAO_code == "EDDW" |
-                                      ICAO_code == "EDFZ" |
-                                      ICAO_code == "EDDC")
-
-# keep only relevant columns
-airports_agg <- airports_agg[, c("name", "city", "IATA_code", "longitude", "latitude")]
+# keep only the airports which included in the study
+included_airports <- c("EDDL", "EDDV", "EDDP", "EDDF", "EDDM", "EDDH", "EDDS", "EDDN", "EDDK")
+airports_main <- airports_main |>
+    filter(icao %in% included_airports == TRUE) |>
+    # add labels for included airports
+    mutate(
+        labels = case_when(
+            stringr::str_detect(name, "Stuttgart") == TRUE ~ "Stuttgart",
+            stringr::str_detect(name, "Nürnberg") == TRUE ~ "Nuremberg",
+            stringr::str_detect(name, "Düsseldorf") == TRUE ~ "Dusseldorf",
+            stringr::str_detect(name, "Hannover") == TRUE ~ "Hannover",
+            stringr::str_detect(name, "Leipzig") == TRUE ~ "Leipzig",
+            stringr::str_detect(name, "Frankfurt") == TRUE ~ "Frankfurt",
+            stringr::str_detect(name, "Köln") == TRUE ~ "Cologne",
+            stringr::str_detect(name, "Hamburg") == TRUE ~ "Hamburg",
+            stringr::str_detect(name, "München") == TRUE ~ "Munich"
+        )
+    )
 
 # make sf
-airports_agg <- st_as_sf(airports_agg, coords = c("longitude", "latitude"), crs = 4326)
-airports_agg <- st_transform(airports_agg, crs = 32632)
+airports_main <- st_set_geometry(airports_main, airports_main$geometry)
 
-map_main_agg_airports <- tm_shape(bula)+
-  tm_borders(lwd = 1, col = "gray")+
-  tm_shape(airports_agg)+
-  tm_dots(size = 0.22, shape = 22)+
-  tm_text(text = "city",
-          xmod = c(-0.5, -0.5, 1, 1, 1, 1),
-          ymod = c(0.5, 0.5, -0.5, 0.5, -0.5, -0.5),
-          fontface = "bold",
-          scale = 0.9)+
-  tm_shape(airports_main)+
-  tm_dots(size = 0.22)+
-  tm_text(text = "labels", 
-          xmod = 1,
-          ymod = -0.5,
-          fontface = "bold",
-          scale = 0.9)+
-  tm_add_legend(type = "symbol",
-                shape = c(21, 22),
-                col = "black",
-                labels = c("Main airports", "Agglomeration airports"),
-                border.lwd = 1,
-                border.alpha = 1)+
-  tm_layout(legend.frame = TRUE,
-            legend.position = c("right", "top"))
+#----------------------------------------------
+# mapping airport locations
 
-map_main_agg_airports
-tmap_save(map_main_agg_airports, file = file.path(outputPath, "graphs/map_main_agg_airport_locations.png"))
+map_airports <- ggplot()+
+    geom_sf(
+        data = bula,
+        mapping = aes(geometry = geometry),
+        fill = NA,
+        col = "gray"
+    )+
+    geom_sf(
+        data = airports_main,
+        mapping = aes(geometry = geometry),
+        size = 2
+    )+
+    geom_sf_text(
+        data = airports_main,
+        aes(
+            label = labels,
+            hjust = -0.2
+        )
+    )+
+    theme_void()
 
+# export
+ggsave(
+    map_airports,
+    file = file.path(
+        output_path, "graphs/map_airport_locations.png"
+    ),
+    dpi = owndpi
+)
 
 ###############################################################
 # Descriptives Flight Activity                                #
 ###############################################################
 
-
-# loading -----------------------------------------------------------------
+#----------------------------------------------
+# load data
 
 # create list with all file names
-file.list <- list.files(path = paste0(dataFlug, "Flughaefen/", "Luftverkehr/"), pattern = "*.xlsx", full.names = TRUE)
+file_list <- list.files(
+    path = file.path(
+        data_path, "Flughaefen/Luftverkehr"
+    ),
+    pattern = "*.xlsx",
+    full.names = TRUE
+)
 
 # read in all excel files at once
-df.list <- lapply(file.list, function(x){as.data.frame(read_excel(x, sheet = "1.1.2"))})
+df_list_raw <- lapply(
+    file.list,
+    function(x){as.data.frame(read_excel(x, sheet = "1.1.2"))}
+)
 
 # extract the month names from the file list
-months_names <- substring(file.list, first = 69, last = nchar(file.list) - 5)
+months_names <- substring(
+    file_list,
+    first = 68,
+    last = nchar(file.list) - 5
+)
 
 # assign names to the data list
-names(df.list) <- months_names
+names(df_list_raw) <- months_names
 
+#----------------------------------------------
+# preparation
 
-# preparation -------------------------------------------------------------
-
-##### function
-# prepare each sheet in list
+# prepare function
 prep_luftverkehr <- function(data){
-  # drop unwanted rows and columns
-  data <- data[15:38, 1:2]
-  
-  # rename columns
-  colnames(data) <- c("airports", "flight_activity")
-  
-  # return
-  return(data)
+    # drop unwanted rows and columns
+    data <- data[15:38, 1:2]
+    
+    # rename columns
+    colnames(data) <- c("airports", "flight_activity")
+    
+    # return
+    return(data)
 }
 
-##### prepartion
-
 # apply preparation function to each element in list
-df.list <- lapply(df.list, prep_luftverkehr)
+df_list_people <- lapply(
+    df_list_raw,
+    prep_luftverkehr
+)
 
 # turn list into data frame
-flight_act <- bind_rows(df.list, .id = "id")
+flight_act <- bind_rows(df_list_people, .id = "id")
 
-# split id into month and year
-flight_act <- flight_act %>% mutate(month = substr(id, start = 1, stop = 3),
-                                      year = substr(id, start = 4, stop = 5))
+# some cleaning
+flight_act <- flight_act |>
+    mutate(
+        # split id into month and year
+        month = substr(id, start = 1, stop = 3),
+        year = substr(id, start = 4, stop = 5),
+        year = paste0("20", year),
+        # create year_mon variable
+        date = ymd(paste(year, month, "01", sep = "-")),
+        year_mon = format(as.Date(date), "%Y-%m"),
+        # make flight activity numeric
+        flight_activity = as.numeric(flight_activity)
+    ) |>
+    # keep only relevant columns
+    select(
+        year_mon, airports, flight_activity
+    ) |>
+    # restrict to 2018 and later
+    filter(year_mon >= "2018-01") |>
+    # restrict to airports of interest
+    filter(
+        airports %in% c(
+            "Düsseldorf", "Frankfurt/Main", "Hamburg", "Hannover",
+            "Köln/Bonn", "Leipzig/Halle", "München", "Nürnberg", "Stuttgart"
+        )
+    ) |>
+    # sort by months
+    arrange(year_mon)
 
-# modify year variable
-flight_act$year <- paste0("20", flight_act$year)
+#----------------------------------------------
+# calculate average flight activity over time
 
-# drop id
-flight_act$id <- NULL
+avg_flight_activity <- flight_act |>
+    group_by(year_mon) |>
+    summarise(
+        avg_flight_act = mean(flight_activity, na.rm = TRUE)
+    ) |>
+    as.data.frame()
 
-# create date variable
-flight_act$date <- ymd(paste(flight_act$year, flight_act$month, "01", sep = "-"))
-flight_act$year_mon <- format(as.Date(flight_act$date), "%Y-%m")
+# calculate average for periods before and after lockdown
+before_lock <- as.numeric(
+        flight_act |>
+            filter(year_mon <= "2020-03") |>
+            summarise(
+                avg_flight_act = mean(flight_activity, na.rm = TRUE)
+            )
+)
 
-# drop date, month, year variables
-flight_act$date <- NULL
-flight_act$month <- NULL
-flight_act$year <- NULL
+after_lock <- as.numeric(
+        flight_act |>
+            filter(year_mon > "2020-03") |>
+            summarise(
+                avg_flight_act = mean(flight_activity, na.rm = TRUE)
+            )
+)
 
-# keep only those airports that are also part of analysis
-flight_act <- flight_act %>% filter(airports %in% c("Düsseldorf", "Frankfurt/Main", "Hamburg", 
-                                             "Hannover", "Köln/Bonn", "Leipzig/Halle", "München", "Nürnberg", "Stuttgart"))
-
-# sort by year-month
-flight_act <- flight_act[order(flight_act$year_mon), ]
-
-# make flight_activity numeric
-flight_act$flight_activity <- as.numeric(flight_act$flight_activity)
-
-# restrict to 2018 and later
-flight_act <- flight_act %>% filter(year_mon >= "2018-01")
-
-# calculations ------------------------------------------------------------
-
-# average flight activity by month
-avg_flight_activity_df <- flight_act %>% group_by(year_mon) %>% summarise(avg_flight_activity = mean(flight_activity, na.rm = TRUE))
-
-# -------------------------------------------------------------------------
-# month labels
-month_labels <- c("Jan 2018", "May 2018", "Sep 2018", "Jan 2019", "May 2019", "Sep 2019", 
-                  "Jan 2020", "May 2020", "Sep 2020", "Jan 2021", "May 2021", "Sep 2021")
-
-# plotting ----------------------------------------------------------------
-# add plot date
-avg_flight_activity_df$plot_date <- as.yearmon(avg_flight_activity_df$year_mon)
-avg_flight_activity_df$ref_num_date <- as.numeric(avg_flight_activity_df$plot_date)
-
-# define own theme
-owntheme <- theme(axis.text.x = element_text(size = 14, angle = 45, hjust = 1),
-                  axis.title.x = element_blank(),
-                  axis.title.y = element_text(size = 17, vjust = 2),
-                  axis.text.y = element_text(size = 15),
-                  panel.background = element_rect(colour = "white", fill = "white"),
-                  axis.line = element_line(size = 0.5, linetype = "solid", color = "black"),
-                  legend.key.size = unit(1, "cm"),
-                  legend.text = element_text(size = 11),
-                  axis.ticks.length = unit(0.25, "cm"))
-
+#----------------------------------------------
 # plot average flight activity
-plot_avg_flightact <- ggplot(avg_flight_activity_df)+
-  geom_line(mapping = aes(x = plot_date, y = avg_flight_activity, group = 1), size = 1)+
-  scale_x_yearmon(breaks = seq(min(avg_flight_activity_df$plot_date), max(avg_flight_activity_df$plot_date), 0.34),
-                  labels = month_labels)+
-  scale_y_continuous(name = "Avg. Flight Activity",
-                     breaks = seq(2000, 18000, 2000),
-                     labels = scales::comma)+
-  geom_segment(aes(x = 2020.167, xend = 2020.167, y = 2000, yend = 18000), linetype = 3, size = 1)+
-  owntheme
 
-plot_avg_flightact
-ggsave(plot = plot_avg_flightact, file.path(outputPath, "graphs/avg_flight_activity.png"), width = 8, height = 5)
+# month labels
+month_labels <- c(
+    "Jan 2018", "May 2018", "Sep 2018", "Jan 2019", "May 2019", "Sep 2019", 
+    "Jan 2020", "May 2020", "Sep 2020", "Jan 2021", "May 2021", "Sep 2021"
+)
 
-# -------------------------------------------------------------------------
-# flight activity by airport
+# define plot date
+avg_flight_activity <- avg_flight_activity |>
+    mutate(
+        plot_date = as.yearmon(year_mon)
+    )
 
-# add plot data
-flight_act$plot_date <- as.yearmon(flight_act$year_mon)
+# define lockdown time
+lock <- as.numeric(
+    avg_flight_activity$plot_date[avg_flight_activity$year_mon == "2020-03"]
+)
 
-# define colors
-pal <- MetBrewer::met.brewer(name = "Tiepolo", n = 9)
+# plot
+plot_avg_flightact <- ggplot(avg_flight_activity)+
+    geom_line(
+        mapping = aes(x = plot_date, y = avg_flight_act, group = 1),
+        linewidth = 1
+    )+
+    scale_x_yearmon(
+        breaks = seq(min(avg_flight_activity$plot_date), max(avg_flight_activity$plot_date), 0.34),
+        labels = month_labels
+    )+
+    scale_y_continuous(
+        name = "Avg. Flight Activity",
+        breaks = seq(2000, 18000, 2000),
+        labels = scales::comma
+    )+
+    geom_segment(
+        aes(x = lock, xend = lock, y = 2000, yend = 18000),
+        linetype = 3,
+        size = 1
+    )+
+    # add averages before and after lockdown
+    geom_segment(
+        aes(
+            x = as.numeric(min(plot_date)), xend = lock, y = before_lock, yend = before_lock
+        ),
+        linetype = "twodash",
+        linewidth = 1
+    )+
+    geom_segment(
+        aes(
+            x = lock, xend = as.numeric(max(plot_date)), y = after_lock, yend = after_lock
+        ),
+        linetype = "twodash",
+        linewidth = 1
+    )+
+    owntheme
 
-plot_flight_act_airports <- ggplot(flight_act)+
-  geom_line(mapping = aes(x = plot_date, y = flight_activity, group = airports, col = airports, lwd = airports))+
-  scale_x_yearmon(breaks = seq(min(flight_act$plot_date), max(flight_act$plot_date), 0.34),
-                  labels = month_labels)+
-  scale_y_continuous(name = "Flight Activity",
-                     breaks = seq(0, 45000, 5000),
-                     labels = scales::comma)+
-  scale_color_manual(values = pal,
-                     name = "Airports", 
-                     labels = c("Düsseldorf" = "Dusseldorf",
-                                "Frankfurt/Main" = "Frankfurt",
-                                "Hamburg" = "Hamburg",
-                                "Hannover" = "Hannover",
-                                "Köln/Bonn" = "Cologne",
-                                "Leipzig/Halle" = "Leipzig",
-                                "München" = "Munich",
-                                "Nürnberg" = "Nuremberg",
-                                "Stuttgart" = "Stuttgart"))+
-  scale_size_manual(values = c(1, 1, 1, 1, 2, 2, 1, 1, 1),
-                    name = "Airports",
-                    labels = c("Düsseldorf" = "Dusseldorf",
-                               "Frankfurt/Main" = "Frankfurt",
-                               "Hamburg" = "Hamburg",
-                               "Hannover" = "Hannover",
-                               "Köln/Bonn" = "Cologne",
-                               "Leipzig/Halle" = "Leipzig",
-                               "München" = "Munich",
-                               "Nürnberg" = "Nuremberg",
-                               "Stuttgart" = "Stuttgart"))+
-  geom_segment(aes(x = 2020.167, xend = 2020.167, y = 0, yend = 48000), linetype = 3, size = 1)+
-  owntheme
-
-plot_flight_act_airports
-ggsave(plot = plot_flight_act_airports, file.path(outputPath, "graphs/flight_activity_airports.png"), width = 7, height = 5)
- 
+# export
+ggsave(
+    plot = plot_avg_flightact,
+    file.path(
+        output_path, "graphs/avg_flight_activity.png"
+    ),
+    width = 8,
+    height = 5
+)
 
 ###############################################################
 # Descriptives Freight Transport                              #
 ###############################################################
 
-
-# loading -----------------------------------------------------------------
-
-# create list with all file names
-file.list <- list.files(path = paste0(dataFlug, "Flughaefen/", "Luftverkehr/"), pattern = "*.xlsx", full.names = TRUE)
-
-# read in all excel files at once
-df.list <- lapply(file.list, function(x){as.data.frame(read_excel(x, sheet = "1.1.2"))})
-
-# extract the month names from the file list
-months_names <- substring(file.list, first = 69, last = nchar(file.list) - 5)
-
-# assign names to the data list
-names(df.list) <- months_names
-
+#----------------------------------------------
+# preparation
 prep_fracht <- function(data){
-  # drop unwanted rows and columns
-  data <- data[15:38, 10:11]
-  
-  # rename columns
-  colnames(data) <- c("airports", "freight_t")
-  
-  # return
-  return(data)
+    # drop unwanted rows and columns
+    data <- data[15:38, 10:11]
+    
+    # rename columns
+    colnames(data) <- c("airports", "freight_t")
+    
+    # return
+    return(data)
 }
 
 # apply preparation function to each element in list
-df.list <- lapply(df.list, prep_fracht)
+df_list_freight <- lapply(
+    df_list_raw, prep_fracht
+)
 
 # turn list into data frame
-freight_carry <- bind_rows(df.list, .id = "id")
+freight_carry <- bind_rows(df_list_freight, .id = "id")
 
-# split id into month and year
-freight_carry <- freight_carry %>% mutate(month = substr(id, start = 1, stop = 3),
-                                          year = substr(id, start = 4, stop = 5))
+# some cleaning
+freight_carry <- freight_carry |>
+    mutate(
+        # split id into month and year
+        month = substr(id, start = 1, stop = 3),
+        year = substr(id, start = 4, stop = 5),
+        year = paste0("20", year),
+        # create year_mon variable
+        date = ymd(paste(year, month, "01", sep = "-")),
+        year_mon = format(as.Date(date), "%Y-%m"),
+        # make flight activity numeric
+        freight_t = as.numeric(freight_t)
+    ) |>
+    # keep only relevant columns
+    select(
+        year_mon, airports, freight_t
+    ) |>
+    # restrict to 2018 and later
+    filter(year_mon >= "2018-01") |>
+    # restrict to airports of interest
+    filter(
+        airports %in% c(
+            "Düsseldorf", "Frankfurt/Main", "Hamburg", "Hannover",
+            "Köln/Bonn", "Leipzig/Halle", "München", "Nürnberg", "Stuttgart"
+        )
+    ) |>
+    # sort by months
+    arrange(year_mon)
 
-# modify year variable
-freight_carry$year <- paste0("20", freight_carry$year)
+#----------------------------------------------
+# calculate average freight carried over time
 
-# drop id
-freight_carry$id <- NULL
+avg_freight <- freight_carry |>
+    group_by(year_mon) |>
+    summarise(
+        avg_freight_t = mean(freight_t, na.rm = TRUE)
+    ) |>
+    as.data.frame()
 
-# create date variable
-freight_carry$date <- ymd(paste(freight_carry$year, freight_carry$month, "01", sep = "-"))
-freight_carry$year_mon <- format(as.Date(freight_carry$date), "%Y-%m")
+# calculate average for periods before and after lockdown
+before_lock <- as.numeric(
+        flight_act |>
+            filter(year_mon <= "2020-03") |>
+            summarise(
+                avg_flight_act = mean(flight_activity, na.rm = TRUE)
+            )
+)
 
-# drop date, month, year variables
-freight_carry$date <- NULL
-freight_carry$month <- NULL
-freight_carry$year <- NULL
-
-# keep only those airports that are also part of analysis
-freight_carry <- freight_carry %>% filter(airports %in% c("Düsseldorf", "Frankfurt/Main", "Hamburg", 
-                                                          "Hannover", "Köln/Bonn", "Leipzig/Halle", "München", "Nürnberg", "Stuttgart"))
-
-# sort by year-month
-freight_carry <- freight_carry[order(freight_carry$year_mon), ]
-
-# make flight_activity numeric
-freight_carry$freight_t <- as.numeric(freight_carry$freight_t)
-
-# restrict to 2018 and later
-freight_carry <- freight_carry %>% filter(year_mon >= "2018-01")
-
-
-# calculations ------------------------------------------------------------
-
-# average flight activity by month
-avg_freight_df <- freight_carry %>% group_by(year_mon) %>% summarise(avg_freight_t = mean(freight_t, na.rm = TRUE))
-
-# average freight carry by month without Frankfurt
-avg_freight_withoutFra <- freight_carry %>% group_by(year_mon) %>% filter(airports != "Frankfurt/Main") %>% 
-  summarise(avg_freight_t = mean(freight_t, na.rm = TRUE))
-
-# -------------------------------------------------------------------------
-
-# define plot date
-avg_freight_df$plot_date <- as.yearmon(avg_freight_df$year_mon)
-avg_freight_withoutFra$plot_date <- as.yearmon(avg_freight_withoutFra$year_mon)
-
-# plot average freight carry
-plot_avg_freight <- ggplot(avg_freight_df)+
-  geom_line(mapping = aes(x = plot_date, y = avg_freight_t, group = 1), size = 1)+
-  scale_x_yearmon(breaks = seq(min(avg_freight_df$plot_date), max(avg_freight_df$plot_date), 0.34),
-                  labels = month_labels)+
-  scale_y_continuous(name = "Avg. Freight Carry (in t)",
-                     breaks = seq(35000, 60000, 5000),
-                     labels = scales::comma)+
-  geom_segment(aes(x = 2020.167, xend = 2020.167, y = 35000, yend = 60000), linetype = 3, size = 1)+
-  owntheme
-
-plot_avg_freight
-ggsave(plot = plot_avg_freight, file.path(outputPath, "graphs/avg_freight_carry.png"), width = 8, height = 5)
-
-# plot average freight carry without Frankfurt
-plot_avg_freight_withoutFra <- ggplot(avg_freight_withoutFra)+
-  geom_line(mapping = aes(x = plot_date, y = avg_freight_t, group = 1), size = 1)+
-  scale_x_yearmon(breaks = seq(min(avg_freight_withoutFra$plot_date), max(avg_freight_withoutFra$plot_date), 0.34),
-                  labels = month_labels)+
-  scale_y_continuous(name = "Avg. Freight Carry (in t)",
-                     breaks = seq(20000, 35000, 5000),
-                     labels = scales::comma)+
-  geom_segment(aes(x = 2020.167, xend = 2020.167, y = 20000, yend = 35000), linetype = 3, size = 1)+
-  owntheme
-
-plot_avg_freight_withoutFra
-ggsave(plot = plot_avg_freight, file.path(outputPath, "graphs/avg_freight_carry_withoutFra.png"), width = 8, height = 5)
-
-# -------------------------------------------------------------------------
-# freight carry by airport
-
-# add plot data
-freight_carry$plot_date <- as.yearmon(freight_carry$year_mon)
-
-# define colors
-pal <- MetBrewer::met.brewer(name = "Tiepolo", n = 9)
-
-plot_freight_airports <- ggplot(freight_carry)+
-  geom_line(mapping = aes(x = plot_date, y = freight_t, group = airports, col = airports, lwd = airports))+
-  scale_x_yearmon(breaks = seq(min(freight_carry$plot_date), max(freight_carry$plot_date), 0.34),
-                  labels = month_labels)+
-  scale_y_continuous(name = "Freight Carry (in t)",
-                     breaks = seq(0, 200000, 20000),
-                     labels = scales::comma)+
-  scale_color_manual(values = pal,
-                     name = "Airports", 
-                     labels = c("Düsseldorf" = "Dusseldorf",
-                                "Frankfurt/Main" = "Frankfurt",
-                                "Hamburg" = "Hamburg",
-                                "Hannover" = "Hannover",
-                                "Köln/Bonn" = "Cologne",
-                                "Leipzig/Halle" = "Leipzig",
-                                "München" = "Munich",
-                                "Nürnberg" = "Nuremberg",
-                                "Stuttgart" = "Stuttgart"))+
-  scale_size_manual(values = c(1, 1, 1, 1, 2, 2, 1, 1, 1),
-                    name = "Airports",
-                    labels = c("Düsseldorf" = "Dusseldorf",
-                               "Frankfurt/Main" = "Frankfurt",
-                               "Hamburg" = "Hamburg",
-                               "Hannover" = "Hannover",
-                               "Köln/Bonn" = "Cologne",
-                               "Leipzig/Halle" = "Leipzig",
-                               "München" = "Munich",
-                               "Nürnberg" = "Nuremberg",
-                               "Stuttgart" = "Stuttgart"))+
-  geom_segment(aes(x = 2020.167, xend = 2020.167, y = 0, yend = 220000), linetype = 3, size = 1)+
-  owntheme
-
-plot_freight_airports
-ggsave(plot = plot_freight_airports, file.path(outputPath, "graphs/freight_carry_airports.png"), width = 7, height = 5)
+after_lock <- as.numeric(
+        flight_act |>
+            filter(year_mon > "2020-03") |>
+            summarise(
+                avg_flight_act = mean(flight_activity, na.rm = TRUE)
+            )
+)
 
 ###############################################################
 # Mapping Contour Maps                                        #
 ###############################################################
 
+#----------------------------------------------
 # subset for Hamburg
-contour_ham <- haupt_contour[haupt_contour$ICAO == "EDDH",]
+contour_ham <- haupt_contour |>
+    filter(
+        icao == "EDDH"
+    )
 
-
-# prepare background map --------------------------------------------------
+#----------------------------------------------
+# prepare background map
 
 # change to a format which works with extracting map
 contour_ham4326 <- st_transform(contour_ham, crs = 4326)
@@ -492,35 +416,42 @@ contour_ham4326 <- st_transform(contour_ham, crs = 4326)
 bbox_ham <- st_bbox(contour_ham4326)
 
 # make background map a bit larger than shape
-bbox_ham <- c(bbox_ham[1:2]-0.002, bbox_ham[3:4]+0.002)
+bbox_ham <- c(bbox_ham[1:2] - 0.002, bbox_ham[3:4] + 0.002)
 
 # rename bbox entries
 names(bbox_ham) <- c("left", "bottom", "right", "top")
 
 # get background map from Stamen
-background_map <- get_stamenmap(bbox = bbox_ham, color = "bw", force = TRUE,
-                          zoom = 12) 
-
+background_map <- ggmap::get_stamenmap(
+    bbox = bbox_ham,
+    color = "bw",
+    force = TRUE,
+    zoom = 12
+)
 
 # Define a function to fix the bbox to be in EPSG:3857
 ggmap_bbox <- function(map) {
-  if (!inherits(map, "ggmap")) stop("map must be a ggmap object")
-  # Extract the bounding box (in lat/lon) from the ggmap to a numeric vector, 
-  # and set the names to what sf::st_bbox expects:
-  map_bbox <- setNames(unlist(attr(map, "bb")), 
-                       c("ymin", "xmin", "ymax", "xmax"))
-  
-  # Coonvert the bbox to an sf polygon, transform it to 3857, 
-  # and convert back to a bbox (convoluted, but it works)
-  bbox_3857 <- st_bbox(st_transform(st_as_sfc(st_bbox(map_bbox, crs = 4326)), 3857))
-  
-  # Overwrite the bbox of the ggmap object with the transformed coordinates 
-  attr(map, "bb")$ll.lat <- bbox_3857["ymin"]
-  attr(map, "bb")$ll.lon <- bbox_3857["xmin"]
-  attr(map, "bb")$ur.lat <- bbox_3857["ymax"]
-  attr(map, "bb")$ur.lon <- bbox_3857["xmax"]
-  
-  return(map)
+    if (!inherits(map, "ggmap")) stop("map must be a ggmap object")
+    # Extract the bounding box (in lat/lon) from the ggmap to a numeric vector, 
+    # and set the names to what sf::st_bbox expects:
+    map_bbox <- setNames(
+        unlist(attr(map, "bb")), 
+        c("ymin", "xmin", "ymax", "xmax")
+    )
+
+    # Convert the bbox to an sf polygon, transform it to 3857, 
+    # and convert back to a bbox (convoluted, but it works)
+    bbox_3857 <- st_bbox(
+        st_transform(st_as_sfc(st_bbox(map_bbox, crs = 4326)), 3857)
+    )
+    
+    # Overwrite the bbox of the ggmap object with the transformed coordinates 
+    attr(map, "bb")$ll.lat <- bbox_3857["ymin"]
+    attr(map, "bb")$ll.lon <- bbox_3857["xmin"]
+    attr(map, "bb")$ur.lat <- bbox_3857["ymax"]
+    attr(map, "bb")$ur.lon <- bbox_3857["xmax"]
+    
+    return(map)
 }
 
 # apply function
@@ -529,31 +460,43 @@ background_map <- ggmap_bbox(background_map)
 # transform contour to Googles CRS
 contour_ham3857 <- st_transform(contour_ham, crs = 3857)
 
-
-# plot --------------------------------------------------------------------
-##### plot orginal contour
+#----------------------------------------------
+# plot original shape
 
 # define colours
 colors <- rev(met.brewer(name = "Greek", n = 5, type = "discrete"))
 
 # plot
-plot_ham_org <- ggmap(background_map)+
-  coord_sf(crs = st_crs(3857))+
-  geom_sf(data = contour_ham3857, aes(fill = factor(DB_Low)), lwd = 0.7, color = "black", inherit.aes = FALSE)+
-  scale_fill_manual(values = c("55" = colors[1],
-                               "60" = colors[2],
-                               "65" = colors[3],
-                               "70" = colors[4],
-                               "75" = colors[5]),
-                    name = "Noise contour rings",
-                    labels = c("55" = "Ring 1: 55-59dB",
-                               "60" = "Ring 2: 60-64dB",
-                               "65" = "Ring 3: 65-69dB",
-                               "70" = "Ring 4: 70-74dB",
-                               "75" = "Ring 5: \u2265 75dB"))+
-  xlab("")+
-  ylab("")+
-  theme(panel.background = element_blank(),
+plot_ham_org <- ggmap::ggmap(background_map)+
+    coord_sf(crs = st_crs(3857))+
+    geom_sf(
+        data = contour_ham3857,
+        aes(fill = factor(DB_Low)),
+        lwd = 0.7,
+        color = "black", 
+        inherit.aes = FALSE
+    )+
+    scale_fill_manual(
+        values = c(
+            "55" = colors[1],
+            "60" = colors[2],
+            "65" = colors[3],
+            "70" = colors[4],
+            "75" = colors[5]
+        ),
+        name = "Noise contour rings",
+        labels = c(
+            "55" = "Ring 1: 55-59dB",
+            "60" = "Ring 2: 60-64dB",
+            "65" = "Ring 3: 65-69dB",
+            "70" = "Ring 4: 70-74dB",
+            "75" = "Ring 5: \u2265 75dB"
+        )
+    )+
+    xlab("")+
+    ylab("")+
+    theme(
+        panel.background = element_blank(),
         axis.text = element_blank(),
         axis.ticks = element_blank(),
         panel.border = element_rect(colour = "black", size = 0.8, fill = NA),
@@ -561,40 +504,60 @@ plot_ham_org <- ggmap(background_map)+
         legend.position = c(0.82, 0.145),
         legend.text = element_text(size = 13),
         legend.background = element_rect(fill = alpha("white", alpha = 0.5)),
-        legend.title = element_text(size = 13))
+        legend.title = element_text(size = 13)
+    )
 
-plot_ham_org
-# export manually, dimensions: 732 x 621
-#ggsave(plot = plot_ham_org, file.path(outputPath, "graphs/contour_ham_orginal.png"), width = 8, height = 8, units = "cm")
+# export
+ggsave(
+    plot = plot_ham_org,
+    file.path(
+        output_path, "graphs/contour_ham_orginal.png"
+    ),
+    dpi = owndpi
+)
 
-
-# plot --------------------------------------------------------------------
-##### plot like used in analysis
+#----------------------------------------------
+# plot like used in the analysis
 
 # add ring number
-contour_ham_own <- contour_ham %>% mutate(rings = case_when(DB_Low == 55 ~ 1,
-                                                        DB_Low >= 60 ~ 2))
+contour_ham_own <- contour_ham |>
+    mutate(
+        rings = case_when(
+            DB_Low == 55 ~ 1,
+            DB_Low >= 60 ~ 2)
+    )
 
 # define colors
 colors_own <- rev(met.brewer(name = "Greek", n = 2, type = "discrete"))
 
-
 # transform contour to Stamen CRS
 contour_ham_own3857 <- st_transform(contour_ham_own, crs = 3857)
 
-
 # plot
-plot_ham_own <- ggmap(background_map)+
-  coord_sf(crs = st_crs(3857))+
-  geom_sf(data = contour_ham_own3857, aes(fill = factor(rings)), lwd = 0.7, color = "black", inherit.aes = FALSE)+
-  scale_fill_manual(values = c("1" = colors_own[1],
-                               "2" = colors_own[2]),
-                    name = "Noise contour rings",
-                    labels = c("1" = "Ring 1: 55-59dB",
-                               "2" = "Ring 2: \u2265 60dB"))+
-  xlab("")+
-  ylab("")+
-  theme(panel.background = element_blank(),
+plot_ham_own <- ggmap::ggmap(background_map)+
+    coord_sf(crs = st_crs(3857))+
+    geom_sf(
+        data = contour_ham_own3857,
+        aes(fill = factor(rings)),
+        lwd = 0.7,
+        color = "black",
+        inherit.aes = FALSE
+    )+
+    scale_fill_manual(
+        values = c(
+            "1" = colors_own[1],
+            "2" = colors_own[2]
+        ),
+        name = "Noise contour rings",
+        labels = c(
+            "1" = "Ring 1: 55-59dB",
+            "2" = "Ring 2: \u2265 60dB"
+        )
+    )+
+    xlab("")+
+    ylab("")+
+    theme(
+        panel.background = element_blank(),
         axis.text = element_blank(),
         axis.ticks = element_blank(),
         panel.border = element_rect(colour = "black", size = 0.8, fill = NA),
@@ -602,16 +565,20 @@ plot_ham_own <- ggmap(background_map)+
         legend.position = c(0.82, 0.086),
         legend.text = element_text(size = 13),
         legend.background = element_rect(fill = alpha("white", alpha = 0.5)),
-        legend.title = element_text(size = 13))
-
-plot_ham_own
+        legend.title = element_text(size = 13)
+    )
 
 # export manually, dimensions: 732 x 621
+ggsave(
+    plot = plot_ham_own,
+    file.path(
+        output_path, "graphs/contour_ham_own.png"
+    ),
+    dpi = owndpi
+)
 
-
-
-# plot --------------------------------------------------------------------
-##### plot for groups
+#----------------------------------------------
+# plot treatment and control around noise shape
 
 # make union
 ham_union <- st_union(contour_ham)
@@ -626,145 +593,159 @@ ham_buffer <- st_buffer(ham_union, dist = 5000)
 ham_difference <- st_difference(ham_buffer, ham_neutral_zone)
 
 # generate grid pattern for plotting
-pacman::p_load(cartography)
-grid_pattern <- hatchedLayer(mode = "sfc", pattern = "grid", density = 3, x = ham_neutral_zone)
+grid_pattern <- hatchedLayer(
+    mode = "sfc",
+    pattern = "grid",
+    density = 3,
+    x = ham_neutral_zone
+)
 
 # plot
 map_groups <- tm_shape(ham_difference)+
-  tm_polygons(col = "grey95")+
-  tm_shape(grid_pattern)+
-  tm_lines()+
-  tm_shape(ham_neutral_zone)+
-  tm_borders()+
-  tm_shape(ham_union)+
-  tm_polygons(col = "grey40")+
-  tm_add_legend(type = "fill",
-                col = "grey95", 
-                size = 1,
-                labels = "Control group")+
-  tm_add_legend(type = "symbol",
-                shape = 12,
-                col = "black", 
-                size = 1,
-                labels = "Neutral zone")+
-  tm_add_legend(type = "fill",
-                col = "grey40",
-                size = 1,
-                labels = "Treatment group")+
-  tm_layout(legend.text.size = 0.75)
+    tm_polygons(col = "grey95")+
+    tm_shape(grid_pattern)+
+    tm_lines()+
+    tm_shape(ham_neutral_zone)+
+    tm_borders()+
+    tm_shape(ham_union)+
+    tm_polygons(col = "grey40")+
+    tm_add_legend(
+        type = "fill",
+        col = "grey95", 
+        size = 1,
+        labels = "Control group"
+    )+
+    tm_add_legend(
+        type = "symbol",
+        shape = 12,
+        col = "black", 
+        size = 1,
+        labels = "Neutral zone"
+    )+
+    tm_add_legend(
+        type = "fill",
+        col = "grey40",
+        size = 1,
+        labels = "Treatment group"
+    )+
+    tm_layout(legend.text.size = 0.75)
 
-map_groups
-#tmap_save(map_groups, file.path(outputPath, "graphs/contour_ham_groups.png"))
+tmap_save(
+    map_groups,
+    file.path(
+        output_path, "graphs/contour_ham_groups.png"
+    )
+)
 
 ###############################################################
 # Plotting price development                                  #
 ###############################################################
 
+#----------------------------------------------
+# prepare
 
-# prepare housing data ----------------------------------------------------
+# apply preparation for estimation
+housing_wk_prep <- prep_est(housing_wk)
 
-##### function
-prep_housing <- function(housing_data){
-  # drop geometry
-  housing_data <- st_drop_geometry(housing_data)
-  
-  # restrict to 5km to contour ring
-  housing_data <- housing_data %>% filter(distance_main_airports <= 5)
-  
-  housing_data <- housing_data %>% filter(distance_main_airports >= 1 | distance_main_airports == 0)
-  
-  # drop Airports Tegel and Schoenefeld
-  housing_data <- housing_data %>% filter(closest_main_airports != "EDDT" & closest_main_airports != "EDDB")
-  
-  # drop March 2020
-  housing_data <- housing_data %>% filter(year_mon != "2020-03")
-  
-  # add quarters to the data
-  housing_data$plot_date <- as.yearmon(housing_data$year_mon)
-  housing_data$quarter <- as.yearqtr(housing_data$plot_date)
-  housing_data$plot_date <- NULL
-  
-  # add ring for 60dB and above
-  housing_data <- housing_data %>% mutate(con_ring8 = case_when(con_ring1 == 1 | con_ring2 == 1 | con_ring3 == 1 | con_ring4 == 1 ~ 1,
-                                                                con_ring5 == 1 ~ 0))
-  
-  housing_data$con_ring8[is.na(housing_data$con_ring8)] <- 0
-  
-  # return
-  return(housing_data)
-}
+# add plot date and quarters
+housing_wk_prep <- housing_wk_prep |>
+    mutate(
+        plot_date = as.yearmon(year_mon_end),
+        quarter = as.yearqtr(plot_date),
+        plot_date = NULL
+    )
 
-##### apply function
-wk_prep <- prep_housing(wk)
+#----------------------------------------------
+# calculate average prices by quarter
 
-# average price -----------------------------------------------------------
+avg_prices <- housing_wk_prep |>
+    group_by(quarter, con_ring0) |>
+    summarise(
+        mean_price = mean(price_sqmeter, na.rm = TRUE)
+    ) |>
+    as.data.frame()
 
-# select only prices and time variable
-# set type for each data set
-wk_prices <- wk_prep %>% select(price_sqmeter, kaufpreis, quarter, year_mon, con_ring0)
+# add lockdown indicator
+avg_prices <- avg_prices |>
+    mutate(
+        lockdown = case_when(
+            quarter <= 2020.00 ~ "before_lock",
+            TRUE ~ "after_lock"
+        )
+    )
 
-# summary function
-sum_price_quarter <- function(df, variable, name){
-  sum_df <- df %>% group_by(quarter, con_ring0) %>% summarise(mean_price_sqmeter = mean({{variable}}, na.rm = TRUE))
-  
-  # rename
-  colnames(sum_df) <- c("quarter", "con_ring0", paste0("mean_price_sqmeter_", name))
-  
-  # sort by con_ring0
-  sum_df <- sum_df[order(sum_df$con_ring0),]
-  
-  # return
-  return(sum_df)
-}
+#----------------------------------------------
+# plot average prices
 
-# line thickness
-linethick = 1
+plot_wk <- ggplot(
+    data = avg_prices,
+    mapping = aes(x = quarter, group = factor(con_ring0))
+    )+
+    geom_line(
+        mapping = aes(y = mean_price,
+        linetype = factor(con_ring0)),
+        linewidth = 1
+    )+
+    scale_linetype_manual(
+        values = c(
+            "0" = "solid",
+            "1" = "twodash"
+        ),
+        labels = c(
+            "0" = "< 55dB (control)",
+            "1" = "\u2265 55dB (treated)"
+        ),
+        name = ""
+    )+
+    scale_y_continuous(
+        breaks = seq(3000, 6000, 500),
+        labels = scales::comma
+    )+
+    scale_x_yearqtr(
+        format = "%Y Q%q", 
+        limits = c(min(avg_prices$quarter), max(avg_prices$quarter)),
+        breaks = seq(min(avg_prices$quarter), max(avg_prices$quarter), 0.25)
+    )+
+    labs(
+        x = "",
+        y = expression(paste("Price per sq. meter [€/", m^{2}, "]"))
+    )+
+    geom_segment(
+        aes(x = 2020.00, xend = 2020.00, y = 3000, yend = 6000),
+        linetype = 3,
+        linewidth = 0.9
+    )+
+    # add trends
+    geom_smooth(
+        data = avg_prices |> filter(con_ring0 == 0),
+        method = "lm",
+        formula = y ~ x,
+        se = FALSE,
+        aes(group = lockdown, x = quarter, y = mean_price), col = "grey60"
+    )+
+    geom_smooth(
+        data = avg_prices |> filter(con_ring0 == 1),
+        method = "lm",
+        formula = y ~ x,
+        se = FALSE,
+        aes(group = lockdown, x = quarter, y = mean_price), col = "grey60"
+    )+
+    owntheme
 
-# mytheme
-mytheme <- theme(panel.background = element_blank(),
-                 axis.text.x = element_text(angle = 45, hjust = 1, size = 15),
-                 axis.text.y = element_text(size = 15),
-                 axis.line = element_line(colour = "black"),
-                 axis.title.y = element_text(size = 18),
-                 legend.text = element_text(size = 15),
-                 axis.ticks.length = unit(0.25, "cm"),
-                 legend.key = element_blank())
+# export
+ggsave(
+    plot = plot_wk,
+    file.path(
+        output_path, "graphs/wk_price_development.png"
+    ), 
+    width = 8,
+    height = 6
+)
 
-# WK ----------------------------------------------------------------------
-
-# subset for treated and control and summarise
-wk_sum <- wk_prices %>% summarise(sum_price_quarter(., variable = price_sqmeter, name = "apart"))
-
-
-##### plots
-# apartments
-plot_wk <- ggplot(data = wk_sum, mapping = aes(x = quarter, group = factor(con_ring0)))+
-  geom_line(mapping = aes(y = mean_price_sqmeter_apart, linetype = factor(con_ring0)), lwd = linethick)+
-  scale_linetype_manual(values = c("0" = "solid",
-                                   "1" = "twodash"),
-                        labels = c("0" = "< 55dB (control)",
-                                   "1" = "\u2265 55dB (treated)"),
-                        name = "")+
-  scale_y_continuous(breaks = seq(3000, 5600, 500),
-                     labels = scales::comma)+
-  scale_x_yearqtr(format = "%Y Q%q", 
-                  limits = c(min(wk_sum$quarter), max(wk_sum$quarter)),
-                  breaks = seq(min(wk_sum$quarter), max(wk_sum$quarter), 0.25))+
-  labs(x = "", y = expression(paste("Price per sq. meter [€/", m^{2}, "]")))+ 
-  geom_segment(aes(x = 2020.00, xend = 2020.00, y = 3000, yend = 5600), linetype = 3, lwd = 0.9)+
-  mytheme
-
-plot_wk  
-ggsave(plot = plot_wk, file.path(outputPath, "graphs/wk_price_development.png"), width = 8, height = 6)
-
-
-
-
-
+# CONTINUE HERE
 ###############################################################
 # Descriptives Housing Data                                   #
 ###############################################################
-
 
 # functions ---------------------------------------------------------------
 
