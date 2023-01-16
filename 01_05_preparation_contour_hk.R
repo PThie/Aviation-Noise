@@ -13,7 +13,7 @@
 # load data
 red <- qs::qread(
     file.path(
-        data_path, "housing/WK_prepared.qs"
+        data_path, "housing/HK_prepared.qs"
     )
 )
 
@@ -330,6 +330,6 @@ qs::qsave(
     red_contour,
     file.path(
         data_path,
-        "housing/WK_contour.qs"
+        "housing/HK_contour.qs"
     )
 )

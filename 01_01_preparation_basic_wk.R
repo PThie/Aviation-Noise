@@ -1,4 +1,11 @@
 ###############################################################
+# Description                                                 #
+###############################################################
+
+# This file performes the basic cleaning for the housing data of apartment
+# sales.
+
+###############################################################
 # load data                                                   #
 ###############################################################
 
@@ -8,21 +15,6 @@ red_org <- haven::read_dta(
         data_immo, "WK_allVersions_ohneText.dta"
     )
 )
-
-
-# # regional info (regional centers settlement density, and  regional types)
-# regional_types <- read.fst(file.path(dataFlug, "raumtyp/raumtyp_siedlungsdicht_nach_gemeinde_prep.fst"))
-# regional_center <- readRDS(file.path(dataFlug, "raumzentren/raumzentren_nach_gemeinde_prep.rds"))
-
-# # railroad noise
-# rail_noise <- st_read(file.path(dataFlug, "umgebungslaerm/schiene/Basisdaten/Mrail_Source_17.shp"))
-
-# # industrial noise
-# industry_noise <- st_read(file.path(dataFlug, "umgebungslaerm/industrie/Ballungsraeume/Lden/Aggind_Lden_17.shp"))
-
-# # street noise
-# streets <- st_read(file.path(dataFlug, "umgebungslaerm/strasse/Hauptverkehrsstrassen/Basisdaten/Mroad_Source_17.shp"))
-
 
 #----------------------------------------------
 # airport locations
@@ -330,55 +322,6 @@ red_geo <- st_transform(
     crs = utmcrs
 )
 
-# CONTINUE:
-# Put in different file
-
-###############################################################
-# additional controls                                         #
-###############################################################
-
-# # create AGS with zeros
-# red_geo$AGS_gem <- as.character(red_geo$gid2019)
-# red_geo$AGS_gem <- ifelse(nchar(red_geo$AGS_gem) == 7,
-#                           yes = paste0(0, red_geo$AGS_gem),
-#                           no = paste0(red_geo$AGS_gem))
-
-# red_geo$AGS_gem[red_geo$AGS_gem == "2e+06"] <- "02000000"
-# red_geo$AGS_gem[red_geo$AGS_gem == "01.1e+07"] <- "11000000"
-
-# # -------------------------------------------------------------------------
-# # regional types
-# regional_types$municipality <- NULL
-# regional_types$settlement_density <- NULL
-# red_geo <- merge(red_geo, regional_types, by.x = "AGS_gem", by.y = "ags", all.x = TRUE)
-
-
-# # -------------------------------------------------------------------------
-# # regional center
-# regional_center <- st_set_geometry(regional_center, regional_center$geometry)
-# regional_center <- st_transform(regional_center, crs = 32632)
-# regional_center <- regional_center[!st_is_empty(regional_center$geometry), ]
-
-# # subset for large center (Oberzentrum == 1)
-# largcenter <- regional_center[regional_center$center_identifier == 1, ]
-
-# # subset for medium center (Mittelzentrum == 2)
-# medcenter <- regional_center[regional_center$center_identifier == 2, ]
-
-# # subset for small center (Grundzentrum == 3)
-# smalcenter <- regional_center[regional_center$center_identifier == 3, ]
-
-
-# -------------------------------------------------------------------------
-# distances regional centers
-
-# add distance to closest center to housing
-# red_geo$distance_largcenter <- as.numeric(apply(st_distance(red_geo, largcenter), 1, min)) / 1000 # to get kilometers
-# red_geo$distance_medcenter <- as.numeric(apply(st_distance(red_geo, medcenter), 1, min)) / 1000 # to get kilometers
-# red_geo$distance_smalcenter <- as.numeric(apply(st_distance(red_geo, smalcenter), 1, min)) / 1000 # to get kilometers
-
-# NOTE: I continued here
-
 ###############################################################
 # distance to airport building                                #
 ###############################################################
@@ -464,33 +407,6 @@ red_geo5 <- air_noise_distance(red_geo5)
 red_geo <- rbind(
     red_geo1, red_geo2, red_geo3, red_geo4, red_geo5
 )
-
-# # -------------------------------------------------------------------------
-# # distance to industry
-
-# industry_noise <- st_transform(industry_noise, crs = 32632)
-
-# nearest_ind <- st_nearest_feature(red_geo, industry_noise)
-# red_geo$distance_industry <- as.numeric(st_distance(red_geo, industry_noise[nearest_ind, ], by_element = TRUE) / 1000)
-
-
-# # distance to rail --------------------------------------------------------
-
-# # transform crs
-# rail_noise <- st_transform(rail_noise, crs = 32632)
-
-# nearest_rail <- st_nearest_feature(red_geo, rail_noise)
-# red_geo$distance_railroads <- as.numeric(st_distance(red_geo, rail_noise[nearest_rail, ], by_element = TRUE) / 1000)
-
-
-# # distance to streets -----------------------------------------------------
-
-# # transform crs
-# streets <- st_transform(streets, crs = 32632)
-
-# nearest <- st_nearest_feature(red_geo, streets)
-# saveRDS(nearest, file.path(dataFlug, "housing/Temp/nearest_streets_wk.rds"))
-# red_geo$distance_streets <- as.numeric(st_distance(red_geo, streets[nearest, ], by_element = TRUE) / 1000)
 
 ###############################################################
 # save data                                                   #

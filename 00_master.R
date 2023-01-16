@@ -7,7 +7,8 @@
 #         "dplyr", "data.table", "sf", "zoo", "ggplot2",
 #         "readxl", "fixest", "sp", "gstat", "tmap",
 #         "psych", "openxlsx", "fst", "lemon", "lubridate",
-#         "scales", "MetBrewer", "tidyr", "qs", "docstring"
+#         "scales", "MetBrewer", "tidyr", "qs", "docstring",
+#         "jsonlite", "haven"
 #     )
 # )
 
@@ -82,6 +83,16 @@ source(
         "functions/intersection_function.R"
     )
 )
+
+# subsetting and intersecting housing data with noise contour (using
+# intersection function)
+source(
+    file.path(
+        code_path,
+        "functions/housing_cont.R"
+    )
+)
+
 
 # TODO: Needs rework (was never complete)
 ################################################################
