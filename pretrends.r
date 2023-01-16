@@ -2,10 +2,11 @@
 # Load Data                                                    #
 ################################################################
 
-wk_housing <- readRDS(file.path(dataFlug, "housing/wk_contour.rds"))
-
-# load preparation function
-# source(file.path(codePath, "functions/prep_est.Rd"))
+wk_housing <- qs::qread(
+    file.path(
+        data_path, "housing/WK_complete.qs"
+    )
+)
 
 ################################################################
 # Preparation                                                  #
