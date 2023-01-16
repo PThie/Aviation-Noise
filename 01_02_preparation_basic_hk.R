@@ -291,7 +291,7 @@ red$ln_price_sqmeter <- log(red$price_sqmeter)
 
 #----------------------------------------------
 # price log
-red$ln_flatprice <- log(red$kaufpreis)
+red$ln_houseprice <- log(red$kaufpreis)
 
 ###############################################################
 # prepare coordinates                                         #
