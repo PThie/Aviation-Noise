@@ -64,7 +64,7 @@ code_path <- file.path(main_path, "code")
 # auxiliary code
 code_aux <- file.path(main_path, "code/aux_code")
 # output path
-output_path <- file.path(main_path, "Auswertung/output")
+output_path <- file.path(main_path, "output")
 
 ################################################################
 # Set Directory                                                #
