@@ -747,69 +747,91 @@ ggsave(
 # Descriptives Housing Data                                   #
 ###############################################################
 
-# functions ---------------------------------------------------------------
+#----------------------------------------------
+# subsetting
+# keep only the relevant variables
 
-##### preping
-prep_descriptives <- function(housing.df, price_variable){
-
-  # select the main variables (part of regression)
-  housing.df <- housing.df %>% select("alter", "wohnflaeche",
-                                      "etage", "balkon", "objektzustand", 
-                                      "einbaukueche", "garten", 
-                                      "heizungsart", "ausstattung", "zimmeranzahl",
-                                      "badezimmer", "distance_largcenter", 
-                                      "distance_medcenter", "distance_smalcenter", "distance_industry", "distance_railroads", "distance_streets",
-                                      "distance_main_airports_building", "con_ring0", "fir_lockdown", price_variable)
-  
-  # return
-  return(housing.df)
+# function for subsetting data
+prep_descriptives <- function(housing, price_variable){
+    # select the main variables (part of regression)
+    housing <- housing |>
+        select(
+            "alter", "wohnflaeche", "etage", "balkon", "objektzustand", 
+            "einbaukueche", "garten", "heizungsart", "ausstattung", "zimmeranzahl",
+            "badezimmer", "distance_largcenter", "distance_medcenter", "distance_smalcenter",
+            "distance_industry", "distance_railroads", "distance_streets", "distance_main_airports_building",
+            "con_ring0", "fir_lockdown",
+            price_variable
+        )
+    # return
+    return(housing)
 }
 
-##### descriptives
-group_descriptives <- function(housing.df, name){
-  # calculate descriptives for before and after lockdown
-  des <- describeBy(housing.df, group = housing.df$fir_lockdown, mat = TRUE, digits = 3, fast = TRUE, na.rm = TRUE)
-  
-  # drop unneeded descriptive statistics
-  des$trimmed <- NULL
-  des$range <- NULL
-  des$max <- NULL
-  des$min <- NULL
-  des$se <- NULL
-  des$item <- NULL
-  des$n <- NULL
-  des$vars <- NULL
-  
-  # add variable names
-  des$variables <- row.names(des)
-  
-  # drop unneeded rows
-  des <- des[des$variables != "con_ring01", ]
-  des <- des[des$variables != "con_ring02", ]
-  des <- des[des$variables != "fir_lockdown1", ]
-  des <- des[des$variables != "fir_lockdown2", ]
-  
-  # rename mean and sd for merge
-  names(des)[names(des) == "mean"] <- paste("mean_", name)
-  names(des)[names(des) == "sd"] <- paste("sd_", name)
-  
-  # return
-  return(des)
-}
-
-
-# -------------------------------------------------------------------------
-# prepare
-
+# apply function
 wk_des_data <- prep_descriptives(wk_prep, price_variable = "kaufpreis")
 
+#----------------------------------------------
+# descriptives by lockdown timing (i.e. before and after the lockdown)
 
-# -------------------------------------------------------------------------
-# apartment purchase (WK)
+group_descriptives <- function(housing, name){
+    # calculate descriptives for before and after lockdown
+    des <- describeBy(
+        housing,
+        group = housing$fir_lockdown, mat = TRUE, digits = 3, fast = TRUE, na.rm = TRUE
+    )
+    
+    # drop unneeded descriptive statistics
+    des$trimmed <- NULL
+    des$range <- NULL
+    des$max <- NULL
+    des$min <- NULL
+    des$se <- NULL
+    des$item <- NULL
+    des$n <- NULL
+    des$vars <- NULL
+    
+    # add variable names
+    des$variables <- row.names(des)
+
+    # adjust row names
+    row.names(des) <- seq(1, nrow(des), 1)
+
+    # redefine group
+    # adjust variable names
+    des <- des |>
+        rename(
+            group = group1
+        ) |>
+        mutate(
+            group = case_when(
+                group == 0 ~ "before_lock",
+                TRUE ~ "after_lock"
+            ),
+            variables = str_replace(
+                variables,
+                pattern = "[0-9]+",
+                replacement = ""
+            ),
+            group_label = paste(variables, group, sep = "_")
+        )
+    
+    # drop unneeded rows
+    des <- des |>
+        filter(str_detect(variables, "con_ring|lockdown") == FALSE)
+    
+    # rename mean and sd for merge
+    names(des)[names(des) == "mean"] <- paste0("mean_", name)
+    names(des)[names(des) == "sd"] <- paste0("sd_", name)
+    
+    # return
+    return(des)
+}
 
 # subset for treated and control group
-wk_des_treat <- wk_des_data %>% filter(con_ring0 == 1)
-wk_des_contr <- wk_des_data %>% filter(con_ring0 == 0)
+wk_des_treat <- wk_des_data |>
+    filter(con_ring0 == 1)
+wk_des_contr <- wk_des_data |>
+    filter(con_ring0 == 0)
 
 # apply descriptive function
 des_treat_wk <- group_descriptives(wk_des_treat, name = "wk_treat")
@@ -818,11 +840,160 @@ des_contr_wk <- group_descriptives(wk_des_contr, name = "wk_contr")
 # -------------------------------------------------------------------------
 # combine
 
-des_table <-  merge(des_treat_wk, des_contr_wk, by = "variables")
+# bring both together
+des_table <-  merge(des_treat_wk, des_contr_wk, by = "group_label") |>
+    select(variables.x, group.x, mean_wk_treat, sd_wk_treat, mean_wk_contr, sd_wk_contr) |>
+    rename(
+        variables = variables.x,
+        group = group.x
+    )
+
+# make wide table
+des_table_wide <- des_table |> 
+    select(!c(sd_wk_treat, sd_wk_contr)) |> 
+    pivot_wider(
+        names_from = "group",
+        values_from = c("mean_wk_treat", "mean_wk_contr")
+    ) |>
+    as.data.frame()
+
+#----------------------------------------------
+# adjust table for paper inclusion
+
+# keep only mean
+des_pub_treat <- des_table |>
+    select(-c(sd_wk_treat, sd_wk_contr, mean_wk_contr))
+
+des_pub_contr <- des_table |>
+    select(-c(sd_wk_treat, sd_wk_contr, mean_wk_treat))
+
+# make wide table
+des_pub_treat_wide <- des_pub_treat |>
+    pivot_wider(
+        names_from = group,
+        values_from = mean_wk_treat
+    ) |>
+    rename(
+        after_lock_treat = after_lock,
+        before_lock_treat = before_lock
+    ) |>
+    # change order of columns
+    relocate(
+        before_lock_treat, .before = after_lock_treat
+    ) |>
+    as.data.frame()
+
+des_pub_contr_wide <- des_pub_contr |>
+    pivot_wider(
+        names_from = group,
+        values_from = mean_wk_contr
+    ) |>
+    rename(
+        after_lock_contr = after_lock,
+        before_lock_contr = before_lock
+    ) |>
+    # change order of columns
+    relocate(
+        before_lock_contr, .before = after_lock_contr
+    ) |>
+    as.data.frame()
+
+# bring both together
+des_pub_wide <- merge(
+    des_pub_treat_wide,
+    des_pub_contr_wide
+) |>
+# rearrange rows
+dplyr::arrange(
+    match(
+        variables,
+        c(
+            "kaufpreis", "wohnflaeche", "zimmeranzahl", "alter", "ausstattung",
+            "badezimmer", "etage", "heizungsart", "objektzustand", "balkon",
+            "garten", "einbaukueche", "distance_smalcenter", "distance_medcenter",
+            "distance_largcenter", "distance_main_airports_building",
+            "distance_railroads", "distance_industry", "distance_streets"
+        )
+    )
+)
+
+# calculate unconditional DiD
+des_pub_wide <- des_pub_wide |>
+    mutate(
+        uncond_did = (after_lock_treat - before_lock_treat) - (after_lock_contr - before_lock_contr)
+    )
 
 # -------------------------------------------------------------------------
 # export
-write.xlsx(des_table, file.path(outputPath, "descriptives/summary_statistics.xlsx"), rowNames = FALSE)
+openxlsx::write.xlsx(
+    des_table,
+    file.path(
+        output_path, "descriptives/summary_statistics.xlsx"
+    ),
+    rowNames = FALSE
+)
+
+
+#----------------------------------------------
+
+reg_uncond_did <- function(depvar){
+    # make law implementation a factor
+    # to get the difference for both periods (relative to control period)
+    regdata <- wk_des_data
+    regdata$fir_lockdown <- factor(regdata$fir_lockdown)
+
+    fm <- formula(
+        paste(
+            depvar, "~",
+            paste("con_ring0 * fir_lockdown")
+        )
+    )
+
+    # run regression
+    est_mod <- feols(
+            fml = fm,
+            data = regdata,
+            se = "hetero"
+    )
+    # extract interaction terms (i.e. unconditional DiD)
+    # est_mod_df <- as.data.frame(est_mod$coeftable[c(5, 6), c("Estimate", "Std. Error")])
+    
+    # # rename rows and columns
+    # rownames(est_mod_df) <- seq(1, nrow(est_mod_df), by = 1)
+    # colnames(est_mod_df) <- c("estimate", "std_error")
+    
+    # # add variable name and implementation phase
+    # # est_mod_df <- est_mod_df |> 
+    # #     mutate(implementation = c("adoption", "actual_treat"),
+    # #         variable = depvar)
+    
+    # # reorder
+    # # est_mod_df <- est_mod_df |> 
+    # #     select(variable, implementation, estimate, std_error)
+    
+    # # round estimates and SE
+    # est_mod_df <- est_mod_df |> 
+    #     mutate(estimate = round(estimate, digits = 3),
+    #         std_error = round(std_error, digits = 3))
+    
+    # return output
+    return(est_mod)
+}
+
+# get variable for regression
+variable_names <- as.character(unique(des_table_wide$variable))
+variable_names <- variable_names[1]
+
+# define list for storage
+reg_output_uncond_did_list <- list()
+
+# run regressions for each variable
+for(variable_name in variable_names){
+    reg_out <- reg_uncond_did(depvar = variable_name)
+    reg_output_uncond_did_list[[variable_name]] <- reg_out
+}
+
+tst <- feols(alter ~ con_ring0 * factor(fir_lockdown), data = wk_des_data, se = "hetero")
 
 ###############################################################
 # Number of Observations                                      #
