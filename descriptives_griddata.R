@@ -49,7 +49,7 @@ griddata <- griddata |>
     select(
         "r1_id", "r1_mba_a_haeuser", "r1_mba_a_haushalt", "r1_mba_a_wohngeb",
         "r1_kkr_w_summe", "r1_mso_p_singles", "r1_mso_p_paare",
-        "r1_mso_p_familien", "r1_alq_p_quote", "r1_met_p_deutschl", "r1_mso_p_ausland",
+        "r1_mso_p_familien", "r1_alq_p_quote",
         "r1_ewa_a_gesamt", "r1_eag_p_m00bis03":"r1_eag_p_w75undgr"
     )
 
@@ -120,11 +120,9 @@ haupt_contour_union <- st_set_geometry(
 
 # buffer 5km
 haupt_contour_buffer_5km <- st_buffer(haupt_contour_union, dist = 5000)
-# haupt_contour_buffer_5km <- st_transform(haupt_contour_buffer_5km, cr = 4326)
 
 # buffer 1km
 haupt_contour_buffer_1km <- st_buffer(haupt_contour_union, dist = 1000)
-# haupt_contour_buffer_1km <- st_transform(haupt_contour_buffer_1km, crs = 4326)
 
 # join with grids
 airport_grids_buffer_5km <- st_join(
@@ -270,9 +268,8 @@ griddata_groups <- read.fst(
 griddata_groups <- griddata_groups |>
     select(
         r1_mba_a_haushalt, r1_ewa_a_gesamt, r1_alq_p_quote,
-        purchpower_household, r1_mso_p_singles, working,
-        r1_mso_p_ausland, r1_met_p_deutschl,
-        treated_indicator,
+        purchpower_household, r1_mso_p_singles, r1_mso_p_paare, r1_mso_p_familien,
+        working, treated_indicator,
     )
 
 des_grid <- describeBy(
@@ -338,153 +335,25 @@ testing <- function(var) {
 # define variables
 vars <- c(
     "purchpower_household", "r1_alq_p_quote", "r1_mba_a_haushalt", "r1_ewa_a_gesamt",
-    "r1_mso_p_singles", "working", "r1_mso_p_ausland", "r1_met_p_deutschl"
+    "r1_mso_p_singles", "r1_mso_p_paare", "r1_mso_p_familien", "working"
 )
 
+# loop through variables
+results_list <- list()
 for(v in vars) {
-    print(testing(var = v))
+    results_list[[v]] <- testing(var = v)
 }
 
+# combine in data frame
+results <- rbindlist(results_list)
 
-
-wilcox.test(r1_mso_p_singles ~ treated_indicator, data = griddata_groups, conf.int = TRUE) # groups DO NOT differ (at 5%)
-# wilcox.test(r1_mso_p_paare ~ treated_indicator, data = griddata_groups, conf.int = TRUE) # groups differ (at 5%)
-# wilcox.test(r1_mso_p_familien ~ treated_indicator, data = griddata_groups, conf.int = TRUE) # groups differ (at 5%)
-wilcox.test(non_singles ~ treated_indicator, data = griddata_groups, conf.int = TRUE)
-
-wilcox.test(age0to18 ~ treated_indicator, data = griddata_groups, conf.int = TRUE) # groups differ (at 5%)
-wilcox.test(age18to65 ~ treated_indicator, data = griddata_groups, conf.int = TRUE) # groups differ (at 5%)
-wilcox.test(age65above ~ treated_indicator, data = griddata_groups, conf.int = TRUE) # groups differ (at 5%)
-wilcox.test(non_working ~ treated_indicator, data = griddata_groups, conf.int = TRUE) # groups differ (at 5%)
-
-######################################################
-# violin graphs                                      #
-######################################################
-
-# define theme
-mytheme <- theme(panel.background = element_blank(),
-                 axis.text.x = element_text(size = 15),
-                 axis.text.y = element_text(size = 15),
-                 axis.line = element_line(colour = "black"),
-                 axis.title.y = element_text(size = 18),
-                 legend.text = element_text(size = 15))
-
-
-# -------------------------------------------------------------------------
-# household purchasing power
-
-plot1_hh_pp <- ggplot(griddata_groups, aes(x = treated_indicator, y = purchpower_household, fill = treated_indicator))+
-  geom_violin(show.legend = FALSE)+
-  geom_boxplot(width = 0.1, show.legend = FALSE, lwd = 1)+
-  scale_fill_manual(values = c("darkorange3", "royalblue2"),
-                    name = "")+
-  scale_y_continuous(breaks = seq(20000, 100000, 20000),
-                     labels = scales::comma)+
-  scale_x_discrete(labels = c("control" = "Control region", "treated" = "Treated region"))+
-  labs(y = "Household purchasing power (in Euro)", x = "")+
-  mytheme
-
-plot1_hh_pp
-ggsave(plot = plot1_hh_pp, file.path(outputPath, "graphs/violin_purchpower.png"), width = 7, height = 6)
-
-
-
-# -------------------------------------------------------------------------
-# unemployment rate
-
-plot2_umploy <- ggplot(griddata_groups, aes(x = treated_indicator, y = r1_alq_p_quote, fill = treated_indicator))+
-  geom_violin(show.legend = FALSE)+
-  geom_boxplot(width = 0.1, show.legend = FALSE, lwd = 1)+
-  scale_fill_manual(values = c("darkorange3", "royalblue2"),
-                    name = "")+
-  scale_x_discrete(labels = c("control" = "Control region", "treated" = "Treated region"))+
-  labs(y = "Unemployment rate (in %)", x = "")+
-  mytheme
-
-plot2_umploy
-ggsave(plot = plot2_umploy, file.path(outputPath, "graphs/violin_unempl.png"), width = 7, height = 6)
-
-
-# -------------------------------------------------------------------------
-# number households
-
-plot3_hh <- ggplot(griddata_groups, aes(x = treated_indicator, y = r1_mba_a_haushalt, fill = treated_indicator))+
-  geom_violin(show.legend = FALSE)+
-  geom_boxplot(width = 0.1, show.legend = FALSE, lwd = 1)+
-  scale_fill_manual(values = c("darkorange3", "royalblue2"),
-                    name = "")+
-  scale_x_discrete(labels = c("control" = "Control region", "treated" = "Treated region"))+
-  labs(y = "Number of households", x = "")+
-  scale_y_continuous(breaks = seq(0, 15000, 3000),
-                     labels = scales::comma)+
-  mytheme
-
-plot3_hh
-ggsave(plot = plot3_hh, file.path(outputPath, "graphs/violin_households.png"), width = 7, height = 6)
-
-
-# -------------------------------------------------------------------------
-# number people
-
-plot4_people <- ggplot(griddata_groups, aes(x = treated_indicator, y = r1_ewa_a_gesamt, fill = treated_indicator))+
-  geom_violin(show.legend = FALSE)+
-  geom_boxplot(width = 0.1, show.legend = FALSE, lwd = 1)+
-  scale_fill_manual(values = c("darkorange3", "royalblue2"),
-                    name = "")+
-  scale_x_discrete(labels = c("control" = "Control region", "treated" = "Treated region"))+
-  labs(y = "Number of people", x = "")+
-  scale_y_continuous(breaks = seq(0, 25000, 5000),
-                     labels = scales::comma)+
-  mytheme
-
-plot4_people
-ggsave(plot = plot4_people, file.path(outputPath, "graphs/violin_people.png"), width = 7, height = 6)
-
-
-# -------------------------------------------------------------------------
-# share singles
-
-plot5_singles <- ggplot(griddata_groups, aes(x = treated_indicator, y = r1_mso_p_singles, fill = treated_indicator))+
-  geom_violin(show.legend = FALSE)+
-  geom_boxplot(width = 0.1, show.legend = FALSE, lwd = 1)+
-  scale_fill_manual(values = c("darkorange3", "royalblue2"),
-                    name = "")+
-  scale_x_discrete(labels = c("control" = "Control region", "treated" = "Treated region"))+
-  labs(y = "Share of singles (in %)", x = "")+
-  mytheme
-
-plot5_singles
-ggsave(plot = plot5_singles, file.path(outputPath, "graphs/violin_singles.png"), width = 7, height = 6)
-
-
-# -------------------------------------------------------------------------
-# share couples
-
-plot6_couples <- ggplot(griddata_groups, aes(x = treated_indicator, y = r1_mso_p_paare, fill = treated_indicator))+
-  geom_violin(show.legend = FALSE)+
-  geom_boxplot(width = 0.1, show.legend = FALSE, lwd = 1)+
-  scale_fill_manual(values = c("darkorange3", "royalblue2"),
-                    name = "")+
-  scale_x_discrete(labels = c("control" = "Control region", "treated" = "Treated region"))+
-  labs(y = "Share of couples (in %)", x = "")+
-  mytheme
-
-plot6_couples
-ggsave(plot = plot6_couples, file.path(outputPath, "graphs/violin_couples.png"), width = 7, height = 6)
-
-
-# -------------------------------------------------------------------------
-# share families
-
-plot7_family <- ggplot(griddata_groups, aes(x = treated_indicator, y = r1_mso_p_familien, fill = treated_indicator))+
-  geom_violin(show.legend = FALSE)+
-  geom_boxplot(width = 0.1, show.legend = FALSE, lwd = 1)+
-  scale_fill_manual(values = c("darkorange3", "royalblue2"),
-                    name = "")+
-  scale_x_discrete(labels = c("control" = "Control region", "treated" = "Treated region"))+
-  labs(y = "Share of families (in %)", x = "")+
-  mytheme
-
-plot7_family
-ggsave(plot = plot7_family, file.path(outputPath, "graphs/violin_families.png"), width = 7, height = 6)
-
+#----------------------------------------------
+# export
+write.xlsx(
+    results,
+    file.path(
+        output_path,
+        "descriptives/t_testing.xlsx"
+    ),
+    rowNames = FALSE
+)
