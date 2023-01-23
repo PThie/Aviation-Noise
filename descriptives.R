@@ -640,12 +640,57 @@ tmap_save(
 ###############################################################
 # Plotting price development                                  #
 ###############################################################
+prep_est_mod <- function(housing_data){
+    #' @title Preparation for estimation
+    #' 
+    #' @description This function prepares the data for estimation.
+    #' 
+    #' @param housing_data Housing data after contour information and additonal
+    #' variables have been added
+    #'   
+    #' @return Returns housing data ready for estimation
+    #' @note Difference to overall prep_est function: March 2020 stays included
+    #' @author Patrick Thiel
+    
+    #----------------------------------------------
+    # drop geometry
+    housing_data <- st_drop_geometry(housing_data)
+
+    # make "months" factor variable
+    housing_data$months <- as.factor(housing_data$year_mon_end)
+    
+    # restrict sample
+    housing_data <- housing_data |>
+        # restrict to 5km to contour ring
+        filter(distance_main_airports <= 5) |>
+        # exlcude 1km buffer
+        filter(distance_main_airports >= 1 | distance_main_airports == 0) |>
+        # drop Airports Tegel and Schoenefeld
+        filter(closest_main_airports != "EDDT" & closest_main_airports != "EDDB")
+    
+    # add ring for 60dB and above
+    housing_data <- housing_data |>
+        mutate(
+            con_ring8 = case_when(
+                con_ring1 == 1 |
+                con_ring2 == 1 |
+                con_ring3 == 1 |
+                con_ring4 == 1 ~ 1,
+                con_ring5 == 1 ~ 0
+            )
+        )
+
+    housing_data$con_ring8[is.na(housing_data$con_ring8)] <- 0
+
+    # return
+    return(housing_data)
+}
 
 #----------------------------------------------
 # prepare
 
 # apply preparation for estimation
-housing_wk_prep <- prep_est(housing_wk)
+housing_wk_prep <- prep_est_mod(housing_wk)
 
 # add plot date and quarters
 housing_wk_prep <- housing_wk_prep |>
@@ -742,7 +787,158 @@ ggsave(
     height = 6
 )
 
-# CONTINUE HERE
+###############################################################
+# Plotting number of observations by quarter                  #
+###############################################################
+
+#----------------------------------------------
+# overall count by quarter
+
+overall_count_n <- housing_wk_prep |>
+    group_by(quarter, con_ring0) |>
+    summarise(
+        n = n()
+    ) |>
+    as.data.frame()
+
+# plot
+
+plot_count_overall <- ggplot(
+    data = count_n,
+    mapping = aes(x = quarter, group = factor(con_ring0))
+    )+
+    geom_line(
+        aes(y = n, linetype = factor(con_ring0)),
+        linewidth = 1
+    )+
+    scale_linetype_manual(
+        values = c(
+            "0" = "solid",
+            "1" = "twodash"
+        ),
+        labels = c(
+            "0" = "< 55dB (control)",
+            "1" = "\u2265 55dB (treated)"
+        ),
+        name = ""
+    )+
+    scale_y_continuous(
+        breaks = seq(0, 10000, 1000),
+        labels = scales::comma
+    )+
+    scale_x_yearqtr(
+        format = "%Y Q%q", 
+        limits = c(min(overall_count_n$quarter), max(overall_count_n$quarter)),
+        breaks = seq(min(overall_count_n$quarter), max(overall_count_n$quarter), 0.25)
+    )+
+    labs(
+        x = "",
+        y = "Observations"
+    )+
+    owntheme
+
+ggsave(
+    plot = plot_count_overall,
+    file.path(
+        output_path,
+        "graphs/observations_by_quarter.png"
+    ),
+    dpi = owndpi,
+    width = 10,
+    height = 8
+)
+
+#----------------------------------------------
+# count by quarter and airport
+
+count_airport_n <- housing_wk_prep |>
+    group_by(closest_main_airports, quarter, con_ring0) |>
+    summarise(
+        n = n()
+    ) |>
+    as.data.frame()
+
+# define colors
+col <- met.brewer(
+    name = "Redon",
+    n = 9
+)
+
+plot_count_airports <- ggplot()+
+    geom_line(
+        data = count_airport_n |> filter(con_ring0 == 0),
+        mapping = aes(
+            x = quarter,
+            y = n,
+            group = factor(closest_main_airports),
+            col = factor(closest_main_airports),
+            linetype = "control"            
+        ),
+        linewidth = 1
+    )+
+    geom_line(
+        data = count_airport_n |> filter(con_ring0 == 1),
+        mapping = aes(
+            x = quarter,
+            y = n,
+            group = factor(closest_main_airports),
+            col = factor(closest_main_airports),
+            linetype = "treated"
+        ),
+        linewidth = 1
+    )+
+    scale_linetype_manual(
+        values = c(
+            "control" = "solid",
+            "treated" = "twodash"
+        ),
+        labels = c(
+            "control" = "< 55dB (control)",
+            "treated" = "\u2265 55dB (treated)"
+        ),
+        name = "Groups"
+    )+
+    scale_color_manual(
+        values = col,
+        labels = c(
+            "EDDF" = "Frankfurt",
+            "EDDH" = "Hannover",
+            "EDDK" = "Cologne",
+            "EDDL" = "Dusseldorf",
+            "EDDM" = "Munich",
+            "EDDN" = "Nuremberg",
+            "EDDP" = "Leipzig",
+            "EDDS" = "Stuttgart",
+            "EDDV" = "Hannover"
+        ),
+        name = "Airports"
+    )+
+    scale_y_continuous(
+        breaks = seq(0, 3000, 500),
+        labels = scales::comma
+    )+
+    scale_x_yearqtr(
+        format = "%Y Q%q", 
+        limits = c(min(count_airport_n$quarter), max(count_airport_n$quarter)),
+        breaks = seq(min(count_airport_n$quarter), max(count_airport_n$quarter), 0.25)
+    )+
+    labs(
+        x = "",
+        y = "Observations"
+    )+
+    owntheme
+
+ggsave(
+    plot = plot_count_airports,
+    file.path(
+        output_path,
+        "graphs/observations_by_quarter_airports.png"
+    ),
+    dpi = owndpi,
+    width = 10,
+    height = 8
+)
+
 ###############################################################
 # Descriptives Housing Data                                   #
 ###############################################################
@@ -768,7 +964,7 @@ prep_descriptives <- function(housing, price_variable){
 }
 
 # apply function
-wk_des_data <- prep_descriptives(wk_prep, price_variable = "kaufpreis")
+wk_des_data <- prep_descriptives(housing_wk_prep, price_variable = "kaufpreis")
 
 #----------------------------------------------
 # descriptives by lockdown timing (i.e. before and after the lockdown)
@@ -858,90 +1054,14 @@ des_table_wide <- des_table |>
     as.data.frame()
 
 #----------------------------------------------
-# adjust table for paper inclusion
-
-# keep only mean
-des_pub_treat <- des_table |>
-    select(-c(sd_wk_treat, sd_wk_contr, mean_wk_contr))
-
-des_pub_contr <- des_table |>
-    select(-c(sd_wk_treat, sd_wk_contr, mean_wk_treat))
-
-# make wide table
-des_pub_treat_wide <- des_pub_treat |>
-    pivot_wider(
-        names_from = group,
-        values_from = mean_wk_treat
-    ) |>
-    rename(
-        after_lock_treat = after_lock,
-        before_lock_treat = before_lock
-    ) |>
-    # change order of columns
-    relocate(
-        before_lock_treat, .before = after_lock_treat
-    ) |>
-    as.data.frame()
-
-des_pub_contr_wide <- des_pub_contr |>
-    pivot_wider(
-        names_from = group,
-        values_from = mean_wk_contr
-    ) |>
-    rename(
-        after_lock_contr = after_lock,
-        before_lock_contr = before_lock
-    ) |>
-    # change order of columns
-    relocate(
-        before_lock_contr, .before = after_lock_contr
-    ) |>
-    as.data.frame()
-
-# bring both together
-des_pub_wide <- merge(
-    des_pub_treat_wide,
-    des_pub_contr_wide
-) |>
-# rearrange rows
-dplyr::arrange(
-    match(
-        variables,
-        c(
-            "kaufpreis", "wohnflaeche", "zimmeranzahl", "alter", "ausstattung",
-            "badezimmer", "etage", "heizungsart", "objektzustand", "balkon",
-            "garten", "einbaukueche", "distance_smalcenter", "distance_medcenter",
-            "distance_largcenter", "distance_main_airports_building",
-            "distance_railroads", "distance_industry", "distance_streets"
-        )
-    )
-)
-
-# calculate unconditional DiD
-des_pub_wide <- des_pub_wide |>
-    mutate(
-        uncond_did = (after_lock_treat - before_lock_treat) - (after_lock_contr - before_lock_contr)
-    )
-
-# -------------------------------------------------------------------------
-# export
-openxlsx::write.xlsx(
-    des_table,
-    file.path(
-        output_path, "descriptives/summary_statistics.xlsx"
-    ),
-    rowNames = FALSE
-)
-
-
-#----------------------------------------------
+# unconditional difference in difference
 
 reg_uncond_did <- function(depvar){
-    # make law implementation a factor
-    # to get the difference for both periods (relative to control period)
+    # make timing variable factor
     regdata <- wk_des_data
     regdata$fir_lockdown <- factor(regdata$fir_lockdown)
 
+    # define function
     fm <- formula(
         paste(
             depvar, "~",
@@ -955,79 +1075,131 @@ reg_uncond_did <- function(depvar){
             data = regdata,
             se = "hetero"
     )
+
     # extract interaction terms (i.e. unconditional DiD)
-    # est_mod_df <- as.data.frame(est_mod$coeftable[c(5, 6), c("Estimate", "Std. Error")])
+    est_mod_df <- est_mod$coeftable[4, c("Estimate", "Std. Error")] |>
+        t() |>
+        as.data.frame()
     
     # # rename rows and columns
-    # rownames(est_mod_df) <- seq(1, nrow(est_mod_df), by = 1)
-    # colnames(est_mod_df) <- c("estimate", "std_error")
+    colnames(est_mod_df) <- c("estimate", "std_error")
     
-    # # add variable name and implementation phase
-    # # est_mod_df <- est_mod_df |> 
-    # #     mutate(implementation = c("adoption", "actual_treat"),
-    # #         variable = depvar)
-    
-    # # reorder
-    # # est_mod_df <- est_mod_df |> 
-    # #     select(variable, implementation, estimate, std_error)
-    
-    # # round estimates and SE
-    # est_mod_df <- est_mod_df |> 
-    #     mutate(estimate = round(estimate, digits = 3),
-    #         std_error = round(std_error, digits = 3))
+    # # add variable name
+    # round other variables
+    est_mod_df <- est_mod_df |> 
+        mutate(
+            variables = depvar,
+            estimate = round(estimate, digits = 3),
+            std_error = round(std_error, digits = 3)
+        ) |>
+        relocate(
+            variables, .before = estimate
+        )
     
     # return output
-    return(est_mod)
+    return(est_mod_df)
 }
 
 # get variable for regression
-variable_names <- as.character(unique(des_table_wide$variable))
-variable_names <- variable_names[1]
+variable_names <- as.character(unique(des_table_wide$variables))
 
 # define list for storage
-reg_output_uncond_did_list <- list()
+reg_output_list <- list()
 
 # run regressions for each variable
 for(variable_name in variable_names){
     reg_out <- reg_uncond_did(depvar = variable_name)
-    reg_output_uncond_did_list[[variable_name]] <- reg_out
+    reg_output_list[[variable_name]] <- reg_out
 }
 
-tst <- feols(alter ~ con_ring0 * factor(fir_lockdown), data = wk_des_data, se = "hetero")
+# make data frame
+uncond_did <- do.call(rbind.data.frame, reg_output_list)
 
-###############################################################
-# Number of Observations                                      #
-###############################################################
+# adjust rows
+rownames(uncond_did) <- seq(1, nrow(uncond_did), 1)
 
-num_obs <- function(df){
-  # treatment group after lockdown
-  ring8_after <- length(which(df$con_ring8 == 1 & df$fir_lockdown == 1))
-  ring5_after <- length(which(df$con_ring5 == 1 & df$fir_lockdown == 1))
-  ring0_after <- length(which(df$con_ring0 == 1 & df$fir_lockdown == 1))
-  
-  # treatment group before lockdown
-  ring8_before <- length(which(df$con_ring8 == 1 & df$fir_lockdown == 0))
-  ring5_before <- length(which(df$con_ring5 == 1 & df$fir_lockdown == 0))
-  ring0_before <- length(which(df$con_ring0 == 1 & df$fir_lockdown == 0))
-  
-  # form data frame
-  rings_num_obs <- as.data.frame(cbind(c("\u2265 60dB", "\u2265 55dB", "Total"),
-                                       c(ring8_before, ring5_before, ring0_before),
-                                       c(ring8_after, ring5_after, ring0_after)))
-  
-  colnames(rings_num_obs) <- c("rings", "treated_before_lockdown", "treated_after_lockdown")
-  
-  # return
-  return(rings_num_obs)
- 
-}
+# merge to other descriptives
+des_table_wide <- merge(
+    des_table_wide,
+    uncond_did,
+    by = "variables"
+)
 
-wk_obs <- num_obs(wk_prep)
+# reorder rows and colums
+des_table_wide <- des_table_wide |>
+    dplyr::arrange(
+        match(
+            variables,
+            c(
+                "kaufpreis", "wohnflaeche", "zimmeranzahl", "alter", "ausstattung",
+                "badezimmer", "etage", "heizungsart", "objektzustand", "balkon",
+                "garten", "einbaukueche", "distance_smalcenter", "distance_medcenter",
+                "distance_largcenter", "distance_main_airports_building",
+                "distance_railroads", "distance_industry", "distance_streets"
+            )
+        )
+    ) |>
+    select(
+        variables, mean_wk_treat_before_lock, mean_wk_treat_after_lock,
+        mean_wk_contr_before_lock, mean_wk_contr_after_lock, estimate, std_error
+    )
 
+# rename
+names(des_table_wide) <- c(
+    "variables", "treated_before", "treated_after", "control_before",
+    "control_after", "estimate", "std_error"
+)
+
+#----------------------------------------------
+# number of observations
+
+obs <- wk_des_data |>
+    group_by(con_ring0, fir_lockdown) |>
+    summarise(
+        n = n()
+    ) |>
+    # change indicator labelling
+    # add variables to match other descriptives
+    mutate(
+        con_ring0 = case_when(
+            con_ring0 == 0 ~ "control",
+            TRUE ~ "treated"
+        ),
+        fir_lockdown = case_when(
+            fir_lockdown == 0 ~ "before",
+            TRUE ~ "after"
+        ),
+        variables = "observations",
+        estimate = NA,
+        std_error = NA
+    ) |>
+        pivot_wider(
+        names_from = c("con_ring0", "fir_lockdown"),
+        values_from = n
+    ) |>
+    # rearrange columns to match other descriptives
+    select(
+        variables, treated_before, treated_after, control_before, control_after,
+        estimate, std_error
+    ) |>
+    as.data.frame()
+
+# bring together with other
+des <- rbind(
+    des_table_wide, obs
+)
+
+#----------------------------------------------
 # export
-write.xlsx(wk_obs, file = file.path(outputPath, "descriptives/obs_num_by_ring.xlsx"), rowNames = FALSE, sheetName = "WK")
+openxlsx::write.xlsx(
+    des,
+    file.path(
+        output_path, "descriptives/summary_statistics.xlsx"
+    ),
+    rowNames = FALSE
+)
 
-
+# CONTINUE HERE
 ###############################################################
 # Prepare Noise data                                          #
 ###############################################################
@@ -1070,6 +1242,15 @@ noise_all <- rbind(dus, fra, ham, haj, lej, muc)
 # average lden ------------------------------------------------------------
 
 avg_lden <- noise_all %>% group_by(year_mon) %>% summarise(avg_lden_flug = mean(l_den_flug, na.rm = TRUE))
+
+noise_data <- read.fst(
+    file.path(
+        data_path, "Hauptflughaefen_Laerm/avg_month.fst"
+    )
+)
+
+ggplot(noise_data)+
+    geom_line(mapping = aes(x = year_mon, y = avg_l_den_flug, group = 1), size = 1)
 
 ###############################################################
 # Descriptives Noise Data                                     #

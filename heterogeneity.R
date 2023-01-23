@@ -372,8 +372,12 @@ esttex(
 #----------------------------------------------
 # preparation
 
+# prepare housing data
+# dropping March 2020
+# wk_prep_pricey <- prep_est_march(wk_housing, drop_march = TRUE)
+
 # consider only pre-Covid periods
-grid_prices <- wk_prep |>
+grid_prices <- wk_prep_pricey |>
     select(r1_id, price_sqmeter, year_mon_end, closest_main_airports, con_ring0) |>
     filter(year_mon_end >= "2018-01" & year_mon_end <= "2019-12")
 
