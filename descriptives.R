@@ -41,36 +41,14 @@ haupt_contour <- qs::qread(
 )
 
 
-# # -------------------------------------------------------------------------
-# # load noise data
-# # Duesseldorf -------------------------------------------------------------
-# dus19 <- haven::read_dta(file.path(dataFlug, "Hauptflughaefen_Laerm/Duesseldorf/dus_complete_merged_2019.dta"))
-# dus20 <- haven::read_dta(file.path(dataFlug, "Hauptflughaefen_Laerm/Duesseldorf/dus_complete_merged.dta"))
+#----------------------------------------------
+# load noise data
 
-# # Frankfurt ---------------------------------------------------------------
-# fra18 <- haven::read_dta(file.path(dataFlug, "Hauptflughaefen_Laerm/Frankfurt/fra_complete_merged_2018.dta"))
-# fra19 <- haven::read_dta(file.path(dataFlug, "Hauptflughaefen_Laerm/Frankfurt/fra_complete_merged_2019.dta"))
-# fra20 <- haven::read_dta(file.path(dataFlug, "Hauptflughaefen_Laerm/Frankfurt/fra_complete_merged.dta"))
-# fra21 <- haven::read_dta(file.path(dataFlug, "Hauptflughaefen_Laerm/Frankfurt/fra_complete_merged_2021.dta"))
-
-# # Hamburg -----------------------------------------------------------------
-# ham19 <- haven::read_dta(file.path(dataFlug, "Hauptflughaefen_Laerm/Hamburg/ham_complete_merged_2019.dta"))
-# ham20 <- haven::read_dta(file.path(dataFlug, "Hauptflughaefen_Laerm/Hamburg/ham_complete_merged.dta"))
-
-# # Hannover ----------------------------------------------------------------
-# haj18 <- haven::read_dta(file.path(dataFlug, "Hauptflughaefen_Laerm/Hannover/haj_complete_merged_2018.dta"))
-# haj19 <- haven::read_dta(file.path(dataFlug, "Hauptflughaefen_Laerm/Hannover/haj_complete_merged_2019.dta"))
-# haj20 <- haven::read_dta(file.path(dataFlug, "Hauptflughaefen_Laerm/Hannover/haj_complete_merged.dta"))
-# haj21 <- haven::read_dta(file.path(dataFlug, "Hauptflughaefen_Laerm/Hannover/haj_complete_merged_2021.dta"))
-
-# # Leipzig -----------------------------------------------------------------
-# lej19 <- haven::read_dta(file.path(dataFlug, "Hauptflughaefen_Laerm/Leipzig/lej_complete_merged_2019.dta"))
-# lej20 <- haven::read_dta(file.path(dataFlug, "Hauptflughaefen_Laerm/Leipzig/lej_complete_merged.dta"))
-# lej21 <- haven::read_dta(file.path(dataFlug, "Hauptflughaefen_Laerm/Leipzig/lej_complete_merged_2021.dta"))
-
-# # Muenchen ----------------------------------------------------------------
-# muc19 <- haven::read_dta(file.path(dataFlug, "Hauptflughaefen_Laerm/Muenchen/muc_complete_merged_2019.dta"))
-# muc20 <- haven::read_dta(file.path(dataFlug, "Hauptflughaefen_Laerm/Muenchen/muc_complete_merged.dta"))
+noise_data <- read.fst(
+    file.path(
+        data_path, "Hauptflughaefen_Laerm/avg_month.fst"
+    )
+)
 
 ###############################################################
 # Mapping Airports                                            #
@@ -153,7 +131,7 @@ file_list <- list.files(
 
 # read in all excel files at once
 df_list_raw <- lapply(
-    file.list,
+    file_list,
     function(x){as.data.frame(read_excel(x, sheet = "1.1.2"))}
 )
 
@@ -253,7 +231,8 @@ after_lock <- as.numeric(
 # month labels
 month_labels <- c(
     "Jan 2018", "May 2018", "Sep 2018", "Jan 2019", "May 2019", "Sep 2019", 
-    "Jan 2020", "May 2020", "Sep 2020", "Jan 2021", "May 2021", "Sep 2021"
+    "Jan 2020", "May 2020", "Sep 2020", "Jan 2021", "May 2021", "Sep 2021",
+    "Jan 2022"
 )
 
 # define plot date
@@ -261,6 +240,11 @@ avg_flight_activity <- avg_flight_activity |>
     mutate(
         plot_date = as.yearmon(year_mon)
     )
+
+# restrict to June 2022
+# because housing data ends there
+avg_flight_activity <- avg_flight_activity |>
+    filter(year_mon <= "2022-06")
 
 # define lockdown time
 lock <- as.numeric(
@@ -1199,91 +1183,82 @@ openxlsx::write.xlsx(
     rowNames = FALSE
 )
 
-# CONTINUE HERE
-###############################################################
-# Prepare Noise data                                          #
-###############################################################
-
-dus <- rbind(dus19, dus20)
-fra <- rbind(fra18, fra19, fra20, fra21)
-ham <- rbind(ham19, ham20)
-haj <- rbind(haj18, haj19, haj20, haj21)
-lej <- rbind(lej19, lej20, lej21)
-muc <- rbind(muc19, muc20)
-
-# reassign zeros for MUC and DUS to NA
-muc$leq_tag_flug[muc$leq_tag_flug == 0] <- NA
-muc$leq_nacht_flug[muc$leq_nacht_flug == 0] <- NA
-muc$l_den_flug[muc$l_den_flug == 0] <- NA
-
-dus$leq_tag_flug[dus$leq_tag_flug == 0] <- NA
-dus$leq_nacht_flug[dus$leq_nacht_flug == 0] <- NA
-
-# create year month variable
-dus$year_mon <- format(as.Date(dus$date, format = "%Y-%m-%d"), "%Y-%m")
-fra$year_mon <- format(as.Date(fra$date, format = "%Y-%m-%d"), "%Y-%m")
-ham$year_mon <- format(as.Date(ham$date, format = "%Y-%m-%d"), "%Y-%m")
-haj$year_mon <- format(as.Date(haj$date, format = "%Y-%m-%d"), "%Y-%m")
-lej$year_mon <- format(as.Date(lej$date, format = "%Y-%m-%d"), "%Y-%m")
-muc$year_mon <- format(as.Date(muc$date, format = "%Y-%m-%d"), "%Y-%m")
-
-# drop unneeded variables
-dus <- dus[, c("year_mon", "leq_tag_flug", "leq_nacht_flug", "l_den_flug", "airport_name", "station", "lat_station", "lon_station")]
-fra <- fra[, c("year_mon", "leq_tag_flug", "leq_nacht_flug", "l_den_flug", "airport_name", "station", "lat_station", "lon_station")]
-ham <- ham[, c("year_mon", "leq_tag_flug", "leq_nacht_flug", "l_den_flug", "airport_name", "station", "lat_station", "lon_station")]
-haj <- haj[, c("year_mon", "leq_tag_flug", "leq_nacht_flug", "l_den_flug", "airport_name", "station", "lat_station", "lon_station")]
-lej <- lej[, c("year_mon", "leq_tag_flug", "leq_nacht_flug", "l_den_flug", "airport_name", "station", "lat_station", "lon_station")]
-muc <- muc[, c("year_mon", "leq_tag_flug", "leq_nacht_flug", "l_den_flug", "airport_name", "station", "lat_station", "lon_station")]
-
-# merge everything together
-noise_all <- rbind(dus, fra, ham, haj, lej, muc)
-
-
-# average lden ------------------------------------------------------------
-
-avg_lden <- noise_all %>% group_by(year_mon) %>% summarise(avg_lden_flug = mean(l_den_flug, na.rm = TRUE))
-
-noise_data <- read.fst(
-    file.path(
-        data_path, "Hauptflughaefen_Laerm/avg_month.fst"
-    )
-)
-
-ggplot(noise_data)+
-    geom_line(mapping = aes(x = year_mon, y = avg_l_den_flug, group = 1), size = 1)
-
 ###############################################################
 # Descriptives Noise Data                                     #
 ###############################################################
 
 # add plot date
-avg_lden$plot_date <- as.yearmon(avg_lden$year_mon)
+noise_data$plot_date <- as.yearmon(noise_data$year_mon)
 
 # restrict June 2021 (end of housing data)
-avg_lden <- avg_lden %>% filter(year_mon <= "2021-06")
+noise_data <- noise_data |>
+    filter(year_mon <= "2021-06")
 
 # labels
-month_labels <- c("Jan 2018", "May 2018", "Sep 2018", "Jan 2019", "May 2019", "Sep 2019", 
-                  "Jan 2020", "May 2020", "Sep 2020", "Jan 2021", "May 2021")
+month_labels <- c(
+    "Jan 2018", "May 2018", "Sep 2018", "Jan 2019", "May 2019", "Sep 2019", 
+    "Jan 2020", "May 2020", "Sep 2020", "Jan 2021", "May 2021"
+)
+
+# calculate average before lockdown
+before_lock <- as.numeric(
+    noise_data |>
+        filter(year_mon <= "2020-03") |>
+        summarise(
+            avg = mean(avg_l_den_flug, na.rm = TRUE)
+        )
+)
+
+# calculate average after lockdown
+after_lock <- as.numeric(
+    noise_data |>
+        filter(year_mon > "2020-03") |>
+        summarise(
+            avg = mean(avg_l_den_flug, na.rm = TRUE)
+        )
+)
 
 ##### plot
-plot_noise <- ggplot(avg_lden)+
-  geom_line(mapping = aes(x = plot_date, y = avg_lden_flug, group = 1), size = 1)+
-  scale_x_yearmon(breaks = seq(min(avg_lden$plot_date), max(avg_lden$plot_date), 0.34),
-                  labels = month_labels)+
-  scale_y_continuous(name = "Avg. Noise Level (in dB)",
-                     breaks = seq(45, 56, 1))+
-  geom_segment(aes(x = 2020.167, xend = 2020.167, y = 45, yend = 56), linetype = 3, size = 1)+
-  owntheme
+plot_noise <- ggplot(noise_data)+
+    geom_line(
+        mapping = aes(x = plot_date, y = avg_l_den_flug, group = 1),
+        size = 1
+    )+
+    scale_x_yearmon(
+        breaks = seq(min(noise_data$plot_date), max(noise_data$plot_date), 0.34),
+        labels = month_labels
+    )+
+    scale_y_continuous(
+        name = "Avg. Noise Level (in dB)",
+        breaks = seq(45, 56, 1)
+    )+
+    geom_segment(
+        mapping = aes(x = lock, xend = lock, y = 45, yend = 56),
+        linetype = 3,
+        size = 1
+    )+
+    geom_segment(
+        mapping = aes(
+            x = as.numeric(min(plot_date)), xend = lock, y = before_lock, yend = before_lock
+        ),
+        linetype = "twodash",
+        linewidth = 1
+    )+
+    geom_segment(
+        aes(
+            x = lock, xend = as.numeric(max(plot_date)), y = after_lock, yend = after_lock
+        ),
+        linetype = "twodash",
+        linewidth = 1
+    )+
+    owntheme
 
-plot_noise
-ggsave(plot = plot_noise, file.path(outputPath, "graphs/avg_noise_levels.png"), width = 8, height = 5)
-
-
-##### mean before and after
-noise_all %>% filter(year_mon < "2020-03") %>% summarise(mean(l_den_flug, na.rm = TRUE))
-noise_all %>% filter(year_mon >= "2020-03") %>% summarise(mean(l_den_flug, na.rm = TRUE))
-
+ggsave(
+    plot = plot_noise,
+    file.path(output_path, "graphs/avg_noise_levels.png"),
+    width = 8,
+    height = 5
+)
 
 ###############################################################
 # Share main airports in analysis - passengers                #
@@ -1291,205 +1266,155 @@ noise_all %>% filter(year_mon >= "2020-03") %>% summarise(mean(l_den_flug, na.rm
 # share of traffic for main airports which are part of the analysis relative to
 # all main airports
 
-# loading -----------------------------------------------------------------
-
-# create list with all file names
-file.list <- list.files(path = paste0(dataFlug, "Flughaefen/", "Luftverkehr/"), pattern = "*.xlsx", full.names = TRUE)
-
-# read in all excel files at once
-df.list <- lapply(file.list, function(x){as.data.frame(read_excel(x, sheet = "1.1.2"))})
-
-# extract the month names from the file list
-months_names <- substring(file.list, first = 69, last = nchar(file.list) - 5)
-
-# assign names to the data list
-names(df.list) <- months_names
-
-
-# preparation -------------------------------------------------------------
-
-##### function
-# prepare each sheet in list
-prep_luftverkehr <- function(data){
-  # drop unwanted rows and columns
-  data <- data[15:38, 1:2]
-  
-  # rename columns
-  colnames(data) <- c("airports", "flight_activity")
-  
-  # return
-  return(data)
-}
-
-##### prepartion
-
-# apply preparation function to each element in list
-df.list <- lapply(df.list, prep_luftverkehr)
-
+#----------------------------------------------
+# reload data
 # turn list into data frame
-flight_act <- bind_rows(df.list, .id = "id")
+flight_act_complete <- bind_rows(df_list_people, .id = "id")
 
-# split id into month and year
-flight_act <- flight_act %>% mutate(month = substr(id, start = 1, stop = 3),
-                                    year = substr(id, start = 4, stop = 5))
+# some cleaning
+flight_act_complete <- flight_act_complete |>
+    mutate(
+        # split id into month and year
+        month = substr(id, start = 1, stop = 3),
+        year = substr(id, start = 4, stop = 5),
+        year = paste0("20", year),
+        # create year_mon variable
+        date = ymd(paste(year, month, "01", sep = "-")),
+        year_mon = format(as.Date(date), "%Y-%m"),
+        year = format(as.yearmon(year_mon), "%Y"),
+        # make flight activity numeric
+        flight_activity = as.numeric(flight_activity)
+    ) |>
+    # keep only relevant columns
+    select(
+        year_mon, year, airports, flight_activity
+    ) |>
+    # restrict to 2018 and later
+    filter(year_mon >= "2018-01") |>
+    # sort by months
+    arrange(year_mon)
 
-# modify year variable
-flight_act$year <- paste0("20", flight_act$year)
-
-# drop id
-flight_act$id <- NULL
-
-# create date variable
-flight_act$date <- ymd(paste(flight_act$year, flight_act$month, "01", sep = "-"))
-flight_act$year_mon <- format(as.Date(flight_act$date), "%Y-%m")
-
-# drop date, month, year variables
-flight_act$date <- NULL
-flight_act$month <- NULL
-flight_act$year <- NULL
-
-# keep only those airports that are also part of analysis
-#flight_act <- flight_act %>% filter(airports %in% c("Düsseldorf", "Frankfurt/Main", "Hamburg", 
-#                                                    "Hannover", "Köln/Bonn", "Leipzig/Halle", "München", "Nürnberg", "Stuttgart"))
-
-# sort by year-month
-flight_act <- flight_act[order(flight_act$year_mon), ]
-
-# make flight_activity numeric
-flight_act$flight_activity <- as.numeric(flight_act$flight_activity)
-
-# drop NAs
-flight_act <- flight_act %>% filter(!is.na(airports))
-
-# add year
-flight_act$year <- format(as.yearmon(flight_act$year_mon), "%Y")
-
-
-# shares ------------------------------------------------------------------
-
+#----------------------------------------------
 # total sum
-sum_all_flight_act <- flight_act %>% group_by(year) %>% summarise(sum_all_main = sum(flight_activity, na.rm = TRUE))
+sum_all_flight_act <- flight_act_complete |>
+    group_by(year) |>
+    summarise(sum_all_main = sum(flight_activity, na.rm = TRUE)) |>
+    as.data.frame()
 
 # sum for main airports in analysis
-sum_main_flight_act <- flight_act %>% filter(airports == "Düsseldorf" |
-                                               airports == "Frankfurt/Main" |
-                                               airports == "Hamburg" |
-                                               airports == "Hannover" |
-                                               airports == "Köln/Bonn" |
-                                               airports == "Leipzig/Halle" |
-                                               airports == "München" |
-                                               airports == "Nürnberg" |
-                                               airports == "Stuttgart") %>% 
-                                               group_by(year) %>% summarise(sum_analysis_main = sum(flight_activity, na.rm = TRUE))
+sum_main_flight_act <- flight_act_complete |>
+    filter(
+        airports == "Düsseldorf" |
+        airports == "Frankfurt/Main" |
+        airports == "Hamburg" |
+        airports == "Hannover" |
+        airports == "Köln/Bonn" |
+        airports == "Leipzig/Halle" |
+        airports == "München" |
+        airports == "Nürnberg" |
+        airports == "Stuttgart"
+    ) |>
+    group_by(year) |>
+    summarise(
+        sum_analysis_main = sum(flight_activity, na.rm = TRUE)
+    ) |>
+    as.data.frame()
 
 # combine both and calculate share
-sum_flight_act <- merge(sum_all_flight_act, sum_main_flight_act, by = "year")
-sum_flight_act <- sum_flight_act %>% mutate(share = (sum_analysis_main / sum_all_main) * 100)
+sum_flight_act <- merge(
+    sum_all_flight_act,
+    sum_main_flight_act,
+    by = "year"
+)
+sum_flight_act <- sum_flight_act |>
+    mutate(
+        share = (sum_analysis_main / sum_all_main) * 100
+    )
 
 # export
-write.xlsx(sum_flight_act, file.path(outputPath, "descriptives/share_main_airports_analysis_passengers.xlsx"), row.names = FALSE)
+write.xlsx(
+    sum_flight_act,
+    file.path(
+        output_path,
+        "descriptives/share_main_airports_analysis_passengers.xlsx"
+    ),
+    rowNames = FALSE
+)
 
 ###############################################################
 # Share main airports in analysis - transport                 #
 ###############################################################
 
-# loading -----------------------------------------------------------------
-
-# create list with all file names
-file.list <- list.files(path = paste0(dataFlug, "Flughaefen/", "Luftverkehr/"), pattern = "*.xlsx", full.names = TRUE)
-
-# read in all excel files at once
-df.list <- lapply(file.list, function(x){as.data.frame(read_excel(x, sheet = "1.1.2"))})
-
-# extract the month names from the file list
-months_names <- substring(file.list, first = 69, last = nchar(file.list) - 5)
-
-# assign names to the data list
-names(df.list) <- months_names
-
-prep_fracht <- function(data){
-  # drop unwanted rows and columns
-  data <- data[15:38, 10:11]
-  
-  # rename columns
-  colnames(data) <- c("airports", "freight_t")
-  
-  # return
-  return(data)
-}
-
-# apply preparation function to each element in list
-df.list <- lapply(df.list, prep_fracht)
-
 # turn list into data frame
-freight_carry <- bind_rows(df.list, .id = "id")
+freight_carry_complete <- bind_rows(df_list_freight, .id = "id")
 
-# split id into month and year
-freight_carry <- freight_carry %>% mutate(month = substr(id, start = 1, stop = 3),
-                                          year = substr(id, start = 4, stop = 5))
-
-# modify year variable
-freight_carry$year <- paste0("20", freight_carry$year)
-
-# drop id
-freight_carry$id <- NULL
-
-# create date variable
-freight_carry$date <- ymd(paste(freight_carry$year, freight_carry$month, "01", sep = "-"))
-freight_carry$year_mon <- format(as.Date(freight_carry$date), "%Y-%m")
-
-# drop date, month, year variables
-freight_carry$date <- NULL
-freight_carry$month <- NULL
-
-# sort by year-month
-freight_carry <- freight_carry[order(freight_carry$year_mon), ]
-
-# make flight_activity numeric
-freight_carry$freight_t <- as.numeric(freight_carry$freight_t)
-
-# drop NAs
-freight_carry <- freight_carry %>% filter(!is.na(airports))
-
+# some cleaning
+freight_carry_complete <- freight_carry_complete |>
+    mutate(
+        # split id into month and year
+        month = substr(id, start = 1, stop = 3),
+        year = substr(id, start = 4, stop = 5),
+        year = paste0("20", year),
+        # create year_mon variable
+        date = ymd(paste(year, month, "01", sep = "-")),
+        year_mon = format(as.Date(date), "%Y-%m"),
+        year = format(as.yearmon(year_mon), "%Y"),
+        # make flight activity numeric
+        freight_t = as.numeric(freight_t)
+    ) |>
+    # keep only relevant columns
+    select(
+        year_mon, year, airports, freight_t
+    ) |>
+    # restrict to 2018 and later
+    filter(year_mon >= "2018-01") |>
+    # sort by months
+    arrange(year_mon)
 
 # shares ------------------------------------------------------------------
 
 # total sum
-sum_all_freight_carry <- freight_carry %>% group_by(year) %>% summarise(sum_all_main = sum(freight_t, na.rm = TRUE))
+sum_all_freight_carry <- freight_carry_complete |>
+    group_by(year) |>
+    summarise(
+        sum_all_main = sum(freight_t, na.rm = TRUE)
+    ) |>
+    as.data.frame()
 
 # sum for main airports in analysis
-sum_main_freight_carry <- freight_carry %>% filter(airports == "Düsseldorf" |
-                                               airports == "Frankfurt/Main" |
-                                               airports == "Hamburg" |
-                                               airports == "Hannover" |
-                                               airports == "Köln/Bonn" |
-                                               airports == "Leipzig/Halle" |
-                                               airports == "München" |
-                                               airports == "Nürnberg" |
-                                               airports == "Stuttgart") %>% 
-  group_by(year) %>% summarise(sum_analysis_main = sum(freight_t, na.rm = TRUE))
+sum_main_freight_carry <- freight_carry_complete |>
+    filter(
+        airports == "Düsseldorf" |
+        airports == "Frankfurt/Main" |
+        airports == "Hamburg" |
+        airports == "Hannover" |
+        airports == "Köln/Bonn" |
+        airports == "Leipzig/Halle" |
+        airports == "München" |
+        airports == "Nürnberg" |
+        airports == "Stuttgart"
+    ) |>
+    group_by(year) |>
+    summarise(sum_analysis_main = sum(freight_t, na.rm = TRUE)) |>
+    as.data.frame()
 
 # combine both and calculate share
-sum_freight_carry <- merge(sum_all_freight_carry, sum_main_freight_carry, by = "year")
-sum_freight_carry <- sum_freight_carry %>% mutate(share = (sum_analysis_main / sum_all_main) * 100)
+sum_freight_carry <- merge(
+    sum_all_freight_carry,
+    sum_main_freight_carry,
+    by = "year"
+)
+sum_freight_carry <- sum_freight_carry |>
+    mutate(
+        share = (sum_analysis_main / sum_all_main) * 100
+    )
 
 # export
-write.xlsx(sum_freight_carry, file.path(outputPath, "descriptives/share_main_airports_analysis_transport.xlsx"), row.names = FALSE)
-
-
-# rank airports by transport ----------------------------------------------
-# for 2019
-
-rank_freight_carry <- freight_carry %>% 
-  filter(year == 2019) %>% 
-  group_by(airports) %>% 
-  summarise(total_carry = sum(freight_t, na.rm = TRUE))
-
-# sort
-rank_freight_carry <- rank_freight_carry[rev(order(rank_freight_carry$total_carry)), ]
-
-# add rank
-rank_freight_carry$rank <- seq(1:nrow(rank_freight_carry))
-
-# export
-write.xlsx(rank_freight_carry, file.path(outputPath, "descriptives/rank_transport_airports.xlsx"), rowNames = FALSE)
+write.xlsx(
+    sum_freight_carry,
+    file.path(
+        output_path,
+        "descriptives/share_main_airports_analysis_transport.xlsx"
+    ),
+    rowNames = FALSE
+)

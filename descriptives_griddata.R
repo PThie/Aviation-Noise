@@ -41,14 +41,15 @@ grid_ger <- st_read(
 griddata <- griddata_org
 
 # keep only 2019 (most recent period)
-griddata <- griddata %>% filter(year == 2019)
+griddata <- griddata |>
+    filter(year == 2019)
 
 # keep only variables of interest
 griddata <- griddata |>
     select(
         "r1_id", "r1_mba_a_haeuser", "r1_mba_a_haushalt", "r1_mba_a_wohngeb",
         "r1_kkr_w_summe", "r1_mso_p_singles", "r1_mso_p_paare",
-        "r1_mso_p_familien", "r1_alq_p_quote",
+        "r1_mso_p_familien", "r1_alq_p_quote", "r1_met_p_deutschl", "r1_mso_p_ausland",
         "r1_ewa_a_gesamt", "r1_eag_p_m00bis03":"r1_eag_p_w75undgr"
     )
 
@@ -138,126 +139,217 @@ airport_grids_buffer_1km <- st_join(
 )
 
 # define treated and not treated
-airport_grids_buffer_5km <- airport_grids_buffer_5km %>% mutate(treated_buffer_5km = case_when(is.na(ICAO) ~ "nontreated",
-                                                              !is.na(ICAO) ~ "treated"))
+airport_grids_buffer_5km <- airport_grids_buffer_5km |>
+    mutate(
+        treated_buffer_5km = case_when(
+            is.na(icao) ~ "nontreated",
+            !is.na(icao) ~ "treated"
+        ),
+        id = NULL
+    ) |>
+    st_drop_geometry()
 
-airport_grids_buffer_1km <- airport_grids_buffer_1km %>% mutate(treated_buffer_1km = case_when(is.na(ICAO) ~ "nontreated",
-                                                                                           !is.na(ICAO) ~ "treated"))
+airport_grids_buffer_1km <- airport_grids_buffer_1km |>
+    mutate(
+        treated_buffer_1km = case_when(
+            is.na(icao) ~ "nontreated",
+            !is.na(icao) ~ "treated"
+        ),
+        id = NULL
+    ) |>
+    st_drop_geometry()
 
-##### prep function
-prep_airport_grids_buffer <- function(df){
-  # drop geometry
-  df <- st_drop_geometry(df)
-  
-  # drop ID
-  df$id <- NULL
-  
-  # return
-  return(df)
-}
-
-##### apply function
-airport_grids_buffer_5km <- prep_airport_grids_buffer(airport_grids_buffer_5km)
-airport_grids_buffer_1km <- prep_airport_grids_buffer(airport_grids_buffer_1km)
-
-# -------------------------------------------------------------------------
+#----------------------------------------------
 # overall
 
-overall <- merge(airport_grids, airport_grids_buffer_5km, by = "idm")
-overall <- merge(overall, airport_grids_buffer_1km, by = "idm")
+overall <- merge(
+    airport_grids,
+    airport_grids_buffer_5km,
+    by = "idm"
+)
 
-overall <- overall %>%
-  mutate(treated_indicator = case_when(treated_buffer_5km == "treated" & treated == "treated" & treated_buffer_1km == "treated"  ~ "treated",
-                                       treated_buffer_5km == "treated" & treated == "nontreated" & treated_buffer_1km == "nontreated" ~ "control",
-                                       treated_buffer_5km == "treated" & treated == "nontreated" & treated_buffer_1km == "treated" ~ "1kmbuffer",            
-                                       treated_buffer_5km == "nontreated" & treated == "nontreated" & treated_buffer_1km == "nontreated" ~ "outside"))
+overall <- merge(
+    overall,
+    airport_grids_buffer_1km,
+    by = "idm"
+)
 
-# clean
-overall$ICAO.y <- NULL
-overall$DB_Low.y <- NULL
-overall$DB_High.y <- NULL
-overall$ICAO <- NULL
-
-colnames(overall) <- c("r1_id", "ICAO", "noise_low", "noise_high", "treated", "treated_buffer_5km", "treated_buffer_1km", "treated_indicator")
+overall <- overall |>
+    mutate(
+        treated_indicator = case_when(
+            treated_buffer_5km == "treated" & treated == "treated" & treated_buffer_1km == "treated"  ~ "treated",
+            treated_buffer_5km == "treated" & treated == "nontreated" & treated_buffer_1km == "nontreated" ~ "control",
+            treated_buffer_5km == "treated" & treated == "nontreated" & treated_buffer_1km == "treated" ~ "1kmbuffer",            
+            treated_buffer_5km == "nontreated" & treated == "nontreated" & treated_buffer_1km == "nontreated" ~ "outside"
+        ),
+        icao.x = NULL,
+        icao.y = NULL,
+        icao = NULL
+    ) |>
+    rename(
+        r1_id = idm,
+        noise_low = DB_Low,
+        noise_high = DB_High
+    )
 
 # drop those that are "outside" i.e. not part of control or treatment group
-overall <- overall %>% filter(treated_indicator != "outside")
+overall <- overall |>
+    filter(treated_indicator != "outside")
 
 # exclude also 1km buffer
-overall <- overall %>% filter(treated_indicator != "1kmbuffer")
+overall <- overall |>
+    filter(treated_indicator != "1kmbuffer")
 
 # drop treated and treated_buffer
 overall$treated <- NULL
 overall$treated_buffer_5km <- NULL
 overall$treated_buffer_1km <- NULL
 
-# merge airport grids and griddata ----------------------------------------
+#----------------------------------------------
+# merge airport grids and griddata
 
-griddata_groups <- merge(griddata, overall, by = "r1_id", all.y = TRUE)
+griddata_groups <- merge(
+    griddata,
+    overall,
+    by = "r1_id",
+    all.y = TRUE
+)
 
 # drop unpopulated grids
-griddata_groups <- griddata_groups %>% filter(r1_ewa_a_gesamt != 0)
+griddata_groups <- griddata_groups |>
+    filter(r1_ewa_a_gesamt != 0)
 
 # caculate purchasing power by household
-griddata_groups <- griddata_groups %>% mutate(purchpower_household = r1_kkr_w_summe / r1_mba_a_haushalt)
+griddata_groups <- griddata_groups |>
+    mutate(purchpower_household = r1_kkr_w_summe / r1_mba_a_haushalt)
 
 # define age groups
-griddata_groups <- griddata_groups %>% rowwise() %>% mutate(age0to18 = (r1_eag_p_m00bis03 + r1_eag_p_w00bis03 + r1_eag_p_m03bis06 + r1_eag_p_w03bis06 +
-                                                                          r1_eag_p_m06bis10 + r1_eag_p_w06bis10 + r1_eag_p_m10bis15 + r1_eag_p_w10bis15 +
-                                                                          r1_eag_p_m15bis18 + r1_eag_p_w15bis18),
-                                                            age18to65 = (r1_eag_p_m18bis20 + r1_eag_p_w18bis20 + r1_eag_p_m20bis25 + r1_eag_p_w20bis25 +
-                                                                            r1_eag_p_m25bis30 + r1_eag_p_w25bis30 + r1_eag_p_m30bis35 + r1_eag_p_w30bis35 +
-                                                                            r1_eag_p_m35bis40 + r1_eag_p_w35bis40 + r1_eag_p_m40bis45 + r1_eag_p_w40bis45 +
-                                                                            r1_eag_p_m45bis50 + r1_eag_p_w45bis50 + r1_eag_p_m50bis55 + r1_eag_p_w50bis55 +
-                                                                            r1_eag_p_m55bis60 + r1_eag_p_w55bis60 + r1_eag_p_m60bis65 + r1_eag_p_w60bis65),
-                                                            age65above = (r1_eag_p_m65bis75 + r1_eag_p_w65bis75 + r1_eag_p_m75undgr + r1_eag_p_w75undgr),
-                                                            non_singles = r1_mso_p_paare + r1_mso_p_familien,
-                                                            non_working = age0to18 + age65above)
+griddata_groups <- griddata_groups |>
+    rowwise() |>
+    mutate(
+        age0to18 = (
+            r1_eag_p_m00bis03 + r1_eag_p_w00bis03 + r1_eag_p_m03bis06 + r1_eag_p_w03bis06 +
+            r1_eag_p_m06bis10 + r1_eag_p_w06bis10 + r1_eag_p_m10bis15 + r1_eag_p_w10bis15 +
+            r1_eag_p_m15bis18 + r1_eag_p_w15bis18
+        ),
+        age18to65 = (
+            r1_eag_p_m18bis20 + r1_eag_p_w18bis20 + r1_eag_p_m20bis25 + r1_eag_p_w20bis25 +
+            r1_eag_p_m25bis30 + r1_eag_p_w25bis30 + r1_eag_p_m30bis35 + r1_eag_p_w30bis35 +
+            r1_eag_p_m35bis40 + r1_eag_p_w35bis40 + r1_eag_p_m40bis45 + r1_eag_p_w40bis45 +
+            r1_eag_p_m45bis50 + r1_eag_p_w45bis50 + r1_eag_p_m50bis55 + r1_eag_p_w50bis55 +
+            r1_eag_p_m55bis60 + r1_eag_p_w55bis60 + r1_eag_p_m60bis65 + r1_eag_p_w60bis65
+        ),
+        age65above = (
+            r1_eag_p_m65bis75 + r1_eag_p_w65bis75 + r1_eag_p_m75undgr + r1_eag_p_w75undgr
+        ),
+        non_singles = r1_mso_p_paare + r1_mso_p_familien,
+        non_working = age0to18 + age65above,
+        working = 100 - non_working
+        ) |>
+        as.data.frame()
 
-##### export
-saveRDS(griddata_groups, file.path(dataFlug, "griddata/griddata_groups.rds"))
+#----------------------------------------------
+# export
+write.fst(
+    griddata_groups,
+    file.path(
+        data_path, "griddata/griddata_groups.fst"
+    )
+)
 
 # -------------------------------------------------------------------------
+# descriptives by group (treated vs. control)
 
-##### descriptives by group (treated vs. control)
-des_grid <- describeBy(griddata_groups, mat = TRUE, group = "treated_indicator", fast = T, na.rm = TRUE, digits = 3)
+griddata_groups <- read.fst(
+    file.path(
+        data_path, "griddata/griddata_groups.fst"
+    )
+)
+
+# define variables of interest
+griddata_groups <- griddata_groups |>
+    select(
+        r1_mba_a_haushalt, r1_ewa_a_gesamt, r1_alq_p_quote,
+        purchpower_household, r1_mso_p_singles, working,
+        r1_mso_p_ausland, r1_met_p_deutschl,
+        treated_indicator,
+    )
+
+des_grid <- describeBy(
+    griddata_groups,
+    mat = TRUE,
+    group = "treated_indicator",
+    fast = T,
+    na.rm = TRUE,
+    digits = 3
+)
 
 # add variable names
 des_grid$variables <- rownames(des_grid)
 
-# delete unneeded variables
-des_grid <- des_grid[c(3:20, 97:106), c(11, 2, 5, 6)]
+# adjust row names
+rownames(des_grid) <- seq(1, nrow(des_grid), 1)
 
 # export
-write.xlsx(des_grid, file.path(outputPath, "descriptives/griddata_descriptives.xlsx"))
-
+write.xlsx(
+    des_grid,
+    file.path(
+        output_path,
+        "descriptives/griddata_descriptives.xlsx"
+    )
+)
 
 ######################################################
 # t-tests                                            #
 ######################################################
-library(nortest)
 
-# test for normal distribution (Anderson-Darling normality test) (H0: data follows normal distribution)
-ad.test(griddata_groups$purchpower_household) # no ND
-ad.test(griddata_groups$r1_alq_p_quote) # no ND
+# define testing function
+testing <- function(var) {
+    # perform t-test
+    test_results <- t.test(
+        griddata_groups[[var]] ~ treated_indicator,
+        data = griddata_groups,
+        alternative = "two.sided",
+        var.equal = FALSE
+    )
 
-ad.test(griddata_groups$r1_mba_a_haushalt) # no ND
-ad.test(griddata_groups$r1_ewa_a_gesamt)  # no ND
+    # extract t-statistic and p-value
+    test_df <- as.data.frame(
+        cbind(
+            var_name = var,
+            t_stat = round(
+                test_results$statistic,
+                digits = 3
+            ),
+            p_value = round(
+                test_results$p.value,
+                digits = 3
+            )
+        )
+    )
 
-ad.test(griddata_groups$r1_mso_p_singles) # no ND
-ad.test(griddata_groups$r1_mso_p_paare) # no ND
-ad.test(griddata_groups$r1_mso_p_familien) # no ND
+    # adjust rownames
+    rownames(test_df) <- seq(1, nrow(test_df), 1)
 
-# t-test  (paired) (H0: groups are equal in terms of variable of interest)
-wilcox.test(purchpower_household ~ treated_indicator, data = griddata_groups, conf.int = TRUE) # groups DO NOT differ (at 5%)
-wilcox.test(r1_alq_p_quote ~ treated_indicator, data = griddata_groups, conf.int = TRUE) # groups DO NOT differ (at 5%)
+    # return results
+    return(test_df)
+}
 
-wilcox.test(r1_mba_a_haushalt ~ treated_indicator, data = griddata_groups, conf.int = TRUE) # groups differ (at 5%)
-wilcox.test(r1_ewa_a_gesamt ~ treated_indicator, data = griddata_groups, conf.int = TRUE) # groups differ (at 5%)
+# define variables
+vars <- c(
+    "purchpower_household", "r1_alq_p_quote", "r1_mba_a_haushalt", "r1_ewa_a_gesamt",
+    "r1_mso_p_singles", "working", "r1_mso_p_ausland", "r1_met_p_deutschl"
+)
+
+for(v in vars) {
+    print(testing(var = v))
+}
+
+
 
 wilcox.test(r1_mso_p_singles ~ treated_indicator, data = griddata_groups, conf.int = TRUE) # groups DO NOT differ (at 5%)
-wilcox.test(r1_mso_p_paare ~ treated_indicator, data = griddata_groups, conf.int = TRUE) # groups differ (at 5%)
-wilcox.test(r1_mso_p_familien ~ treated_indicator, data = griddata_groups, conf.int = TRUE) # groups differ (at 5%)
+# wilcox.test(r1_mso_p_paare ~ treated_indicator, data = griddata_groups, conf.int = TRUE) # groups differ (at 5%)
+# wilcox.test(r1_mso_p_familien ~ treated_indicator, data = griddata_groups, conf.int = TRUE) # groups differ (at 5%)
 wilcox.test(non_singles ~ treated_indicator, data = griddata_groups, conf.int = TRUE)
 
 wilcox.test(age0to18 ~ treated_indicator, data = griddata_groups, conf.int = TRUE) # groups differ (at 5%)
