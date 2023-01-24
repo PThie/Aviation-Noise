@@ -14,8 +14,6 @@ read_housing <- function(filename) {
 }
 
 wk_housing <- read_housing(filename = "WK_complete")
-hk_housing <- read_housing(filename = "HK_complete")
-wm_housing <- read_housing(filename = "WM_complete")
 
 ################################################################
 # Preparation                                                  #
@@ -104,8 +102,6 @@ prep_est_march <- function(housing_data, drop_march = FALSE){
 }
 
 wk_prep <- prep_est_march(wk_housing)
-hk_prep <- prep_est_march(hk_housing)
-wm_prep <- prep_est_march(wm_housing)
 
 #----------------------------------------------
 # table labels (for TEX output)
@@ -246,9 +242,27 @@ geom_pointrange(
     size = 0.6
 )+
 geom_hline(yintercept = 0)+
-geom_vline(xintercept = "t")+
+geom_vline(xintercept = "t", linetype = "twodash")+
 scale_y_continuous(
     breaks = seq(-0.04, 0.08, 0.02)
+)+
+scale_x_discrete(
+    labels = c(
+        "t-4" = "Jan '18 - Aug '18",
+        "t-3" = "Sep '18 - Feb '19",
+        "t-2" = "Mar '19 - Aug '19",
+        "t-1" = "Sep '19 - Feb '20",
+        "t" = "Mar '20",
+        "t+1" = "Apr '20 - Jun '20",
+        "t+2" = "Jul '20 - Sep '20",
+        "t+3" = "Oct '20 - Dec '20",
+        "t+4" = "Jan '21 - Mar '21",
+        "t+5" = "Apr '21 - Jun '21",
+        "t+6" = "Jul '21 - Sep '21",
+        "t+7" = "Oct '21 - Dec '21",
+        "t+8" = "Jan '22 - Mar '22",
+        "t+9" = "Apr '22 - Jun '22"
+    )
 )+
 labs(
     x = "",
@@ -270,46 +284,6 @@ ggsave(
     file.path(
         output_path, "graphs/timesplit_plot.png"
     )
-)
-
-################################################################
-# Pretrends other housing types                                #
-################################################################
-
-# house sales
-hk_trend_est <- feols(
-    ln_houseprice ~ alter + alter_squ + wohnflaeche + wohnflaeche_squ +
-        anzahletagen + anzahletagenUNBEKANNT + zimmeranzahl + grundstuecksflaeche +
-        grundstuecksflaeche_squ + as.factor(objektzustand) + objektzustandUNBEKANNT +
-        as.factor(heizungsart) + heizungsartUNBEKANNT + as.factor(ausstattung) + 
-        ausstattungUNBEKANNT + badezimmer + badezimmerUNBEKANNT + distance_largcenter + 
-        distance_medcenter + distance_smalcenter + distance_all_airports_building + 
-        distance_industry + distance_railroads + distance_streets + con_ring0 +
-        i(con_ring0, factor_var = periods, ref = "t"),
-        data = hk_prep, fixef = c("months", "r1_id"), se = "hetero"
-)
-
-# apartment rents
-wm_trend_est <- feols(
-    ln_rent_sqmeter ~ alter + alter_squ + wohnflaeche + wohnflaeche_squ +
-        etage + etageUNBEKANNT + balkon + balkonUNBEKANNT + zimmeranzahl +
-        as.factor(objektzustand) + objektzustandUNBEKANNT + einbaukueche +
-        einbaukuecheUNBEKANNT + garten + gartenUNBEKANNT + as.factor(heizungsart) + 
-        heizungsartUNBEKANNT + as.factor(ausstattung) + ausstattungUNBEKANNT + 
-        badezimmer + badezimmerUNBEKANNT + distance_largcenter + distance_medcenter + 
-        distance_smalcenter + distance_all_airports_building + distance_industry + 
-        distance_railroads + distance_streets + con_ring0 +
-        i(con_ring0, factor_var = periods, ref = "t"),
-        data = wm_prep, fixef = c("months", "r1_id"), se = "hetero"
-)
-
-# export
-esttex(
-    hk_trend_est, wm_trend_est,
-    file = file.path(output_path, "regressions/pretrends_hk_wm.tex"),
-    digits = "r3", replace = TRUE, dict = tablabel_char,
-    signif.code = c("***" = 0.01, "**" = 0.05, "*" = 0.10),
-    headers = c("house sales", "apart rent")
 )
 
 ################################################################
@@ -365,148 +339,170 @@ esttex(
 )
 
 ################################################################
-# pricey vs. non-pricey neighborhoods                          #
+# Noise intensities and temporal dynamics                      #
 ################################################################
-# define pricey regions by grid average
 
-#----------------------------------------------
-# preparation
-
-# prepare housing data
-# dropping March 2020
-# wk_prep_pricey <- prep_est_march(wk_housing, drop_march = TRUE)
-
-# consider only pre-Covid periods
-grid_prices <- wk_prep_pricey |>
-    select(r1_id, price_sqmeter, year_mon_end, closest_main_airports, con_ring0) |>
-    filter(year_mon_end >= "2018-01" & year_mon_end <= "2019-12")
-
-# calculate average price on grid level
-price_summary <- grid_prices |>
-    group_by(r1_id) |>
-    summarise(
-        mean_price_sqmeter = mean(price_sqmeter, na.rm = TRUE)
-    ) |>
-    as.data.frame()
-
-# get airports for grids
-grid_airport <- grid_prices |>
-    select(r1_id, con_ring0, closest_main_airports)
-grid_airport <- grid_airport |>
-    group_by(r1_id) |>
-    summarise(
-        mean_group = mean(con_ring0, na.rm = TRUE),
-        airport = first(closest_main_airports)
-    ) |>
-    as.data.frame()
-
-# merge grid prices and grid airports
-price_summary <- merge(
-    price_summary,
-    grid_airport,
-    by = "r1_id"
+wk_trend_temporal_noise_est <- feols(
+    ln_flatprice ~ alter + alter_squ + wohnflaeche + wohnflaeche_squ +
+        etage + etageUNBEKANNT + balkon + balkonUNBEKANNT + zimmeranzahl +
+        as.factor(objektzustand) + objektzustandUNBEKANNT + einbaukueche +
+        einbaukuecheUNBEKANNT + garten + gartenUNBEKANNT + as.factor(heizungsart) + 
+        heizungsartUNBEKANNT + as.factor(ausstattung) + ausstattungUNBEKANNT + 
+        badezimmer + badezimmerUNBEKANNT + distance_largcenter + distance_medcenter + 
+        distance_smalcenter + distance_all_airports_building + distance_industry + 
+        distance_railroads + distance_streets + con_ring0 +
+        i(con_ring8, factor_var = periods, ref = "t") + 
+        i(con_ring5, factor_var = periods, ref = "t"),
+        data = wk_prep, fixef = c("months", "r1_id"), se = "hetero"
 )
 
-# adjust treated group
-price_summary <- price_summary |>
+etable(
+    wk_trend_temporal_noise_est,
+    signif.code = c("***" = 0.01, "**" = 0.05, "*" = 0.10),
+    digits = "r3", se = "hetero"
+)
+
+# export
+esttex(
+    wk_trend_temporal_noise_est,
+    file = file.path(output_path, "regressions/hetero_temporal_dynamics_intensities.tex"),
+    digits = "r3", replace = TRUE, dict = tablabel_char,
+    signif.code = c("***" = 0.01, "**" = 0.05, "*" = 0.10)
+)
+
+#----------------------------------------------
+# make interval graph
+
+# extract coefficients and standard errors
+coef <- as.data.frame(
+    cbind(
+        summary(wk_trend_temporal_noise_est)$coefficients,
+        summary(wk_trend_temporal_noise_est)$se
+    )
+)
+
+# get variable names from rows
+coef$vars <- rownames(coef)
+
+# set names for data frame
+names(coef) <- c("coef", "se", "vars")
+rownames(coef) <- seq(1, nrow(coef), 1)
+
+# keep only period estimates
+coef_interest <- coef |>
+    filter(stringr::str_detect(vars, "period") == TRUE)
+
+# add reference group (t)
+coef_interest <- rbind(
+    coef_interest,
+    as.data.frame(cbind(coef = 0, se = 0, vars = "periods::t:con_ring8")),
+    as.data.frame(cbind(coef = 0, se = 0, vars = "periods::t:con_ring5"))
+)
+
+# confidence interval threshold
+conf <- 1.64
+
+# define period names
+coef_interest <- coef_interest |>
     mutate(
-        mean_group = case_when(
-            mean_group != 1 & mean_group != 0 ~ 0,
-            TRUE ~ mean_group
-        )
+        period = stringr::str_replace(
+            vars,
+            pattern = "periods::",
+            replacement = ""
+        ),
+        period = stringr::str_replace(
+            period,
+            pattern = ":con_ring8",
+            replacement = ""
+        ),
+        period = stringr::str_replace(
+            period,
+            pattern = ":con_ring5",
+            replacement = ""
+        ),
+        # set period as factor
+        period = factor(
+            period,
+            levels = c(
+                "t-4", "t-3", "t-2", "t-1", "t", "t+1", "t+2", "t+3",
+                "t+4", "t+5", "t+6", "t+7", "t+8", "t+9"
+            )
+        ),
+        # define group
+        group = case_when(
+            str_detect(vars, "con_ring8") ~ "high",
+            TRUE ~ "low"
+        ),
+        # define types
+        coef = as.numeric(coef),
+        se = as.numeric(se),
+        # define confidence interval
+        conf_min = coef - (conf * se),
+        conf_max = coef + (conf * se)
     )
 
-# calculate terciles for each airport separately and treated group
-price_terciles <- price_summary |>
-    group_by(airport, mean_group) |>
-    summarise(
-        quant = sort(
-            as.numeric(
-                quantile(mean_price_sqmeter, probs = seq(0, 1, 1/3), na.rm = TRUE)
-            )
+# plot
+int_temporal_dyn <- ggplot()+
+    geom_pointrange(
+        data = coef_interest,
+        mapping = aes(x = period, y = coef, ymin = conf_min, ymax = conf_max, group = factor(group), shape = group),
+        position = position_dodge(width = 0.7),
+        size = 0.6,
+    )+
+    scale_shape_manual(
+        labels = c(
+            "high" = expression("Ring 2"[High]),
+            "low" = expression("Ring 1"[Low])
+        ),
+        values = c(
+            "high" = 15,
+            "low" = 17
+        ),
+        name = ""
+    )+
+    geom_hline(yintercept = 0)+
+    geom_vline(xintercept = "t", linetype = "twodash")+
+    scale_y_continuous(
+    breaks = seq(-0.10, 0.10, 0.02)
+    )+
+    scale_x_discrete(
+        labels = c(
+            "t-4" = "Jan '18 - Aug '18",
+            "t-3" = "Sep '18 - Feb '19",
+            "t-2" = "Mar '19 - Aug '19",
+            "t-1" = "Sep '19 - Feb '20",
+            "t" = "Mar '20",
+            "t+1" = "Apr '20 - Jun '20",
+            "t+2" = "Jul '20 - Sep '20",
+            "t+3" = "Oct '20 - Dec '20",
+            "t+4" = "Jan '21 - Mar '21",
+            "t+5" = "Apr '21 - Jun '21",
+            "t+6" = "Jul '21 - Sep '21",
+            "t+7" = "Oct '21 - Dec '21",
+            "t+8" = "Jan '22 - Mar '22",
+            "t+9" = "Apr '22 - Jun '22"
         )
-    ) |>
-    as.data.frame()
+    )+
+    labs(
+        x = "",
+        y = "Coefficients and 90% CI"
+    )+
+    theme(
+        panel.background = element_blank(),
+        panel.border = element_rect(size = 1, fill = NA),
+        axis.text = element_text(size = 15),
+        axis.title = element_text(size = 17),
+        legend.key = element_blank(),
+        axis.text.x = element_text(angle = 45, hjust = 1),
+        axis.ticks.length = unit(units = "cm", 0.2)
+    )
 
-# assign categories
-price_terciles$cat <- rep(c("min", "onethird", "twothird", "max"), 18)
-
-# export 
-openxlsx::write.xlsx(
-    price_terciles,
+# export
+ggsave(
+    plot = int_temporal_dyn,
     file.path(
-        output_path,
-        "descriptives/price_terciles_airports.xlsx"
+        output_path, "graphs/time_spaceplit_plot.png"
     ),
-    rowName = FALSE
-)
-
-# get list of airports
-list_airports <- unique(wk_prep$closest_main_airports)
-
-# loop over group, areas, and airports for grid data
-for(group in c(0, 1)){
-    for(areas in c("low", "medium", "high")){
-        for(airport in list_airports){
-        if(areas == "low"){
-            price_summary$cat[
-                price_summary$mean_price_sqmeter <= price_terciles[
-                    price_terciles$mean_group == group & price_terciles$airport == airport & price_terciles$cat == "onethird",
-                    ]$quant & price_summary$airport == airport] <- "low"
-        } else if(areas == "medium"){
-            price_summary$cat[
-                price_summary$mean_price_sqmeter > price_terciles[
-                    price_terciles$mean_group == group & price_terciles$airport == airport & price_terciles$cat == "onethird",
-                    ]$quant & price_summary$mean_price_sqmeter <= price_terciles[
-                        price_terciles$mean_group == group & price_terciles$airport == airport & price_terciles$cat == "twothird",
-                        ]$quant & price_summary$airport == airport] <- "medium"
-        } else {
-            price_summary$cat[
-                price_summary$mean_price_sqmeter > price_terciles[
-                    price_terciles$mean_group == group & price_terciles$airport == airport & price_terciles$cat == "twothird",
-                    ]$quant & price_summary$airport == airport] <- "high"
-        }
-        }
-    }
-}
-
-# keep variables of interest
-price_summary_prep <- price_summary |>
-    select(r1_id, cat)
-
-# merge back to original data set
-wk_prep_grid <- merge(wk_prep, price_summary_prep, by = "r1_id")
-
-#----------------------------------------------
-# subset
-
-wk_high_price <- wk_prep_grid |> filter(cat == "high")
-wk_medium_price <- wk_prep_grid |> filter(cat == "medium")
-wk_low_price <- wk_prep_grid |> filter(cat == "low")
-
-#----------------------------------------------
-# estimation
-
-# specify formula
-wk_base <- reg_base_allring_lockdown(dep_var = "ln_flatprice", cnt = controls)
-
-# run regression
-wk_high_price_est <- est_fm(df = wk_high_price, fm = wk_base)
-wk_medium_price_est <- est_fm(df = wk_medium_price, fm = wk_base)
-wk_low_price_est <- est_fm(df = wk_low_price, fm = wk_base)
-
-# display results
-etable(
-    wk_high_price_est, wk_medium_price_est, wk_low_price_est, 
-    signif.code = c("***" = 0.01, "**" = 0.05, "*" = 0.10),
-    digits = "r3", se = "hetero",
-    headers = c("high price", "medium price", "low price")
-)
-
-esttex(
-    wk_high_price_est, wk_medium_price_est, wk_low_price_est,
-    file = file.path(output_path, "regressions/hetero_pricey_neighborhoods_wk.tex"),
-    digits = "r3", replace = TRUE, dict = tablabel_char, se = "hetero",
-    signif.code = c("***" = 0.01, "**" = 0.05, "*" = 0.10),
-    headers = c("high price", "medium price", "low price")
+    height = 10,
+    width = 13
 )
