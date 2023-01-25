@@ -342,6 +342,7 @@ esttex(
 # Noise intensities and temporal dynamics                      #
 ################################################################
 
+# high noise
 wk_trend_temporal_noise_est <- feols(
     ln_flatprice ~ alter + alter_squ + wohnflaeche + wohnflaeche_squ +
         etage + etageUNBEKANNT + balkon + balkonUNBEKANNT + zimmeranzahl +
@@ -350,7 +351,7 @@ wk_trend_temporal_noise_est <- feols(
         heizungsartUNBEKANNT + as.factor(ausstattung) + ausstattungUNBEKANNT + 
         badezimmer + badezimmerUNBEKANNT + distance_largcenter + distance_medcenter + 
         distance_smalcenter + distance_all_airports_building + distance_industry + 
-        distance_railroads + distance_streets + con_ring0 +
+        distance_railroads + distance_streets +
         i(con_ring8, factor_var = periods, ref = "t") + 
         i(con_ring5, factor_var = periods, ref = "t"),
         data = wk_prep, fixef = c("months", "r1_id"), se = "hetero"
@@ -441,24 +442,15 @@ coef_interest <- coef_interest |>
         conf_max = coef + (conf * se)
     )
 
-# plot
-int_temporal_dyn <- ggplot()+
+#----------------------------------------------
+# plot high noise
+int_temporal_dyn_high <- ggplot()+
     geom_pointrange(
-        data = coef_interest,
-        mapping = aes(x = period, y = coef, ymin = conf_min, ymax = conf_max, group = factor(group), shape = group),
+        data = coef_interest |> filter(group == "high"),
+        mapping = aes(x = period, y = coef, ymin = conf_min, ymax = conf_max, group = factor(group)),
         position = position_dodge(width = 0.7),
         size = 0.6,
-    )+
-    scale_shape_manual(
-        labels = c(
-            "high" = expression("Ring 2"[High]),
-            "low" = expression("Ring 1"[Low])
-        ),
-        values = c(
-            "high" = 15,
-            "low" = 17
-        ),
-        name = ""
+        shape = 15
     )+
     geom_hline(yintercept = 0)+
     geom_vline(xintercept = "t", linetype = "twodash")+
@@ -489,7 +481,7 @@ int_temporal_dyn <- ggplot()+
     )+
     theme(
         panel.background = element_blank(),
-        panel.border = element_rect(size = 1, fill = NA),
+        panel.border = element_rect(linewidth = 1, fill = NA),
         axis.text = element_text(size = 15),
         axis.title = element_text(size = 17),
         legend.key = element_blank(),
@@ -499,9 +491,66 @@ int_temporal_dyn <- ggplot()+
 
 # export
 ggsave(
-    plot = int_temporal_dyn,
+    plot = int_temporal_dyn_high,
     file.path(
-        output_path, "graphs/time_spaceplit_plot.png"
+        output_path, "graphs/time_spaceplit_highnoise_plot.png"
+    ),
+    height = 10,
+    width = 13
+)
+
+#----------------------------------------------
+# plot low noise
+int_temporal_dyn_low <- ggplot()+
+    geom_pointrange(
+        data = coef_interest |> filter(group == "low"),
+        mapping = aes(x = period, y = coef, ymin = conf_min, ymax = conf_max, group = factor(group)),
+        position = position_dodge(width = 0.7),
+        size = 0.6,
+        shape = 17
+    )+
+    geom_hline(yintercept = 0)+
+    geom_vline(xintercept = "t", linetype = "twodash")+
+    scale_y_continuous(
+    breaks = seq(-0.10, 0.10, 0.02)
+    )+
+    scale_x_discrete(
+        labels = c(
+            "t-4" = "Jan '18 - Aug '18",
+            "t-3" = "Sep '18 - Feb '19",
+            "t-2" = "Mar '19 - Aug '19",
+            "t-1" = "Sep '19 - Feb '20",
+            "t" = "Mar '20",
+            "t+1" = "Apr '20 - Jun '20",
+            "t+2" = "Jul '20 - Sep '20",
+            "t+3" = "Oct '20 - Dec '20",
+            "t+4" = "Jan '21 - Mar '21",
+            "t+5" = "Apr '21 - Jun '21",
+            "t+6" = "Jul '21 - Sep '21",
+            "t+7" = "Oct '21 - Dec '21",
+            "t+8" = "Jan '22 - Mar '22",
+            "t+9" = "Apr '22 - Jun '22"
+        )
+    )+
+    labs(
+        x = "",
+        y = "Coefficients and 90% CI"
+    )+
+    theme(
+        panel.background = element_blank(),
+        panel.border = element_rect(linewidth = 1, fill = NA),
+        axis.text = element_text(size = 15),
+        axis.title = element_text(size = 17),
+        legend.key = element_blank(),
+        axis.text.x = element_text(angle = 45, hjust = 1),
+        axis.ticks.length = unit(units = "cm", 0.2)
+    )
+
+# export
+ggsave(
+    plot = int_temporal_dyn_low,
+    file.path(
+        output_path, "graphs/time_spaceplit_lownoise_plot.png"
     ),
     height = 10,
     width = 13

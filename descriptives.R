@@ -779,6 +779,10 @@ ggsave(
 # overall count by quarter
 
 overall_count_n <- housing_wk_prep |>
+    # drop last month of the data
+    # because by definition of end date all adds that are active will ahve the
+    # end date of the last month
+    filter(year_mon_end < "2022-06") |>
     group_by(quarter, con_ring0) |>
     summarise(
         n = n()
@@ -786,9 +790,8 @@ overall_count_n <- housing_wk_prep |>
     as.data.frame()
 
 # plot
-
 plot_count_overall <- ggplot(
-    data = count_n,
+    data = overall_count_n,
     mapping = aes(x = quarter, group = factor(con_ring0))
     )+
     geom_line(
@@ -815,6 +818,11 @@ plot_count_overall <- ggplot(
         limits = c(min(overall_count_n$quarter), max(overall_count_n$quarter)),
         breaks = seq(min(overall_count_n$quarter), max(overall_count_n$quarter), 0.25)
     )+
+    geom_segment(
+        aes(x = 2020.00, xend = 2020.00, y = 0, yend = 6000),
+        linetype = "dotted",
+        linewidth = 0.9
+    )+
     labs(
         x = "",
         y = "Observations"
@@ -836,6 +844,10 @@ ggsave(
 # count by quarter and airport
 
 count_airport_n <- housing_wk_prep |>
+    # drop last month of the data
+    # because by definition of end date all adds that are active will ahve the
+    # end date of the last month
+    filter(year_mon_end < "2022-06") |>
     group_by(closest_main_airports, quarter, con_ring0) |>
     summarise(
         n = n()
@@ -905,6 +917,11 @@ plot_count_airports <- ggplot()+
         format = "%Y Q%q", 
         limits = c(min(count_airport_n$quarter), max(count_airport_n$quarter)),
         breaks = seq(min(count_airport_n$quarter), max(count_airport_n$quarter), 0.25)
+    )+
+    geom_segment(
+        aes(x = 2020.00, xend = 2020.00, y = 0, yend = 2000),
+        linetype = "dotted",
+        linewidth = 0.9
     )+
     labs(
         x = "",
