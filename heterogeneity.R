@@ -167,7 +167,7 @@ etable(
 esttex(
     wk_trend_temporal_est,
     file = file.path(output_path, "regressions/hetero_temporal_dynamics.tex"),
-    digits = "r3", replace = TRUE, dict = tablabel_char,
+    digits = "r3", replace = TRUE, dict = tablabel_char, se = "hetero",
     signif.code = c("***" = 0.01, "**" = 0.05, "*" = 0.10)
 )
 
@@ -334,7 +334,7 @@ etable(
 esttex(
     wk_spacesplit_est,
     file = file.path(output_path, "regressions/hetero_noise_intensities_wk.tex"),
-    digits = "r3", replace = TRUE, dict = tablabel_char,
+    digits = "r3", replace = TRUE, dict = tablabel_char, se = "hetero",
     signif.code = c("***" = 0.01, "**" = 0.05, "*" = 0.10)
 )
 
@@ -367,7 +367,7 @@ etable(
 esttex(
     wk_trend_temporal_noise_est,
     file = file.path(output_path, "regressions/hetero_temporal_dynamics_intensities.tex"),
-    digits = "r3", replace = TRUE, dict = tablabel_char,
+    digits = "r3", replace = TRUE, dict = tablabel_char, se = "hetero",
     signif.code = c("***" = 0.01, "**" = 0.05, "*" = 0.10)
 )
 
@@ -431,7 +431,7 @@ coef_interest <- coef_interest |>
         ),
         # define group
         group = case_when(
-            str_detect(vars, "con_ring8") ~ "high",
+            stringr::str_detect(vars, "con_ring8") == TRUE ~ "high",
             TRUE ~ "low"
         ),
         # define types

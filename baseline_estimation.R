@@ -54,22 +54,55 @@ controls <- c(
 # key variable: interaction lockdown x all rings together (larger equal 55dB)
 
 # define formula
-reg_base_allring_lockdown <- function(dep_var, cnt) {
+reg_base_allring_lockdown <- function(dep_var, cnt, fixef = c("none", "time", "region", "both")) {
     #' @param dep_var Dependent variable (LHS)
     #' @param cnt Controls
-    fm <- formula(
-        paste(dep_var," ~",
-        paste(cnt, collapse = " + "),
-        # coefficient of interest (interaction term)
-        paste("+ fir_lockdown * con_ring0"),
-        "| months + r1_id")
+    #' @param fixef Indicator for fixed effects
+    
+    if(fixef == "none") {
+        fm <- formula(
+            paste(dep_var," ~",
+                paste(cnt, collapse = " + "),
+                # coefficient of interest (interaction term)
+                paste("+ fir_lockdown * con_ring0")
+            )
+        )
+    } else if (fixef == "time") {
+        fm <- formula(
+            paste(dep_var," ~",
+                paste(cnt, collapse = " + "),
+                # coefficient of interest (interaction term)
+                paste("+ fir_lockdown * con_ring0"),
+                "| months"
+            )
+        )
+    } else if (fixef == "region") {
+        fm <- formula(
+            paste(dep_var," ~",
+                paste(cnt, collapse = " + "),
+                # coefficient of interest (interaction term)
+                paste("+ fir_lockdown * con_ring0"),
+                "| r1_id"
+        )
     )
+    } else {
+        fm <- formula(
+            paste(dep_var," ~",
+                paste(cnt, collapse = " + "),
+                # coefficient of interest (interaction term)
+                paste("+ fir_lockdown * con_ring0"),
+                "| months + r1_id"
+            )
+        )
+    }
+
+    # return results
     return(fm)
 }
 
 # define estimation function
-est_fm <- function(df, fm){
-    feols(fml = fm, data = df)
+est_fm <- function(df, dependent, contr, FE){
+    feols(fml = reg_base_allring_lockdown(dep_var = dependent, cnt = contr, fixef = FE), data = df)
 }
 
 #----------------------------------------------
@@ -92,24 +125,24 @@ tablabel_char <- c(
 # baseline apartment prices                                    #
 ################################################################
 
-# specify formula
-wk_base <- reg_base_allring_lockdown(dep_var = "ln_flatprice", cnt = controls)
-
 # run regression
-wk_base_est <- est_fm(df = wk_housing, fm = wk_base)
+wk_base_est_ols <- est_fm(df = wk_housing, dependent = "ln_flatprice", contr = controls, FE = "none")
+wk_base_est_timeFE <- est_fm(df = wk_housing, dependent = "ln_flatprice", contr = controls, FE = "time")
+wk_base_est_regionFE <- est_fm(df = wk_housing, dependent = "ln_flatprice", contr = controls, FE = "region")
+wk_base_est_bothFE <- est_fm(df = wk_housing, dependent = "ln_flatprice", contr = controls, FE = "both")
 
 # display results
 etable(
-    wk_base_est,
+    wk_base_est_ols, wk_base_est_timeFE, wk_base_est_regionFE, wk_base_est_bothFE,
     signif.code = c("***" = 0.01, "**" = 0.05, "*" = 0.10),
     digits = "r3", se = "hetero"
 )
 
 # export
 esttex(
-    wk_base_est,
+    wk_base_est_ols, wk_base_est_timeFE, wk_base_est_regionFE, wk_base_est_bothFE,
     file = file.path(output_path, "regressions/base_wk.tex"),
-    digits = "r3", replace = TRUE, dict = tablabel_char,
+    digits = "r3", replace = TRUE, dict = tablabel_char, se = "hetero",
     signif.code = c("***" = 0.01, "**" = 0.05, "*" = 0.10)
 )
 
@@ -118,30 +151,36 @@ esttex(
 ################################################################
 
 # cluster on grids
-est_fm_gridcluster <- function(df, fm){
-    feols(fml = fm, data = df, cluster = "r1_id")
+est_fm_gridcluster <- function(df, dependent, contr, FE){
+    feols(fml = reg_base_allring_lockdown(dep_var = dependent, cnt = contr, fixef = FE), data = df, cluster = "r1_id")
 }
 
-wk_base_est_gridcl <- est_fm_gridcluster(df = wk_housing, fm = wk_base)
+wk_base_est_gridcl <- est_fm_gridcluster(
+    df = wk_housing, dependent = "ln_flatprice", contr = controls, FE = "both"
+)
 
 # cluster on municipality
-est_fm_municcluster <- function(df, fm){
-    feols(fml = fm, data = df, cluster = "gid2019")
+est_fm_municcluster <- function(df, dependent, contr, FE){
+    feols(fml = reg_base_allring_lockdown(dep_var = dependent, cnt = contr, fixef = FE), data = df, cluster = "gid2019")
 }
 
-wk_base_est_municcl <- est_fm_municcluster(df = wk_housing, fm = wk_base)
+wk_base_est_municcl <- est_fm_municcluster(
+    df = wk_housing, dependent = "ln_flatprice", contr = controls, FE = "both"
+)
 
 # cluster district
-est_fm_distcluster <- function(df, fm){
-    feols(fml = fm, data = df, cluster = "kid2019")
+est_fm_distcluster <- function(df, dependent, contr, FE){
+    feols(fml = reg_base_allring_lockdown(dep_var = dependent, cnt = contr, fixef = FE), data = df, cluster = "kid2019")
 }
 
-wk_base_est_discl <- est_fm_distcluster(df = wk_housing, fm = wk_base)
+wk_base_est_discl <- est_fm_distcluster(
+    df = wk_housing, dependent = "ln_flatprice", contr = controls, FE = "both"
+)
 
 etable(
     wk_base_est_gridcl, wk_base_est_municcl, wk_base_est_discl,
     signif.code = c("***" = 0.01, "**" = 0.05, "*" = 0.10),
-    digits = "r3",
+    digits = "r3", se = "hetero",
     headers = c("gridclust", "municclust", "distrclust")
 )
 
@@ -149,7 +188,7 @@ etable(
 esttex(
     wk_base_est_gridcl, wk_base_est_municcl, wk_base_est_discl,
     file = file.path(output_path, "regressions/base_wk_cluster.tex"),
-    digits = "r3", replace = TRUE, dict = tablabel_char,
+    digits = "r3", replace = TRUE, dict = tablabel_char, se = "hetero",
     signif.code = c("***" = 0.01, "**" = 0.05, "*" = 0.10),
     headers = c("gridclust", "municclust", "distrclust")
 )
@@ -170,11 +209,8 @@ controls_hk <- c(
     "distance_all_airports_building"
 )
 
-# specify formula
-hk_base <- reg_base_allring_lockdown(dep_var = "ln_houseprice", cnt = controls_hk)
-
 # run regression
-hk_base_est <- est_fm(df = hk_housing, fm = hk_base)
+hk_base_est <- est_fm(df = hk_housing, dependent = "ln_houseprice", contr = controls_hk, FE = "both")
 
 # display results
 etable(
@@ -187,11 +223,8 @@ etable(
 # baseline: apartment rents                                    #
 ################################################################
 
-# set up formula 
-wm_base <- reg_base_allring_lockdown(dep_var = "ln_rent_sqmeter", cnt = controls)
-
 # run regression
-wm_base_est <- est_fm(df = wm_housing, fm = wm_base)
+wm_base_est <-  est_fm(df = wm_housing, dependent = "ln_rent_sqmeter", contr = controls, FE = "both")
 
 # display results
 etable(
@@ -247,11 +280,8 @@ controls_sales <- c(
     "distance_all_airports_building", "type"
 )
 
-# define formula
-comb_base <- reg_base_allring_lockdown(dep_var = "ln_price", cnt = controls_sales)
-
 # run regression
-comb_base_est <- est_fm(df = housing_comb, fm = comb_base)
+comb_base_est <- est_fm(df = housing_comb, dependent = "ln_price", contr = controls_sales, FE = "both")
 
 # display results
 etable(
@@ -275,7 +305,7 @@ etable(
 esttex(
     hk_base_est, comb_base_est, wm_base_est,
     file = file.path(output_path, "regressions/base_hk_wk_wm_combined.tex"),
-    digits = "r3", replace = TRUE, dict = tablabel_char,
+    digits = "r3", replace = TRUE, dict = tablabel_char, se = "hetero",
     signif.code = c("***" = 0.01, "**" = 0.05, "*" = 0.10),
     headers = c("houses", "hous_apart_sales", "apart_rent")
 )

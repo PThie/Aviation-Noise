@@ -238,7 +238,7 @@ wm_trend_est <- feols(
 esttex(
     hk_trend_est, wm_trend_est,
     file = file.path(output_path, "regressions/pretrends_hk_wm.tex"),
-    digits = "r3", replace = TRUE, dict = tablabel_char,
+    digits = "r3", replace = TRUE, dict = tablabel_char, se = "hetero",
     signif.code = c("***" = 0.01, "**" = 0.05, "*" = 0.10),
     headers = c("house sales", "apart rent")
 )
