@@ -40,7 +40,6 @@ haupt_contour <- qs::qread(
     )
 )
 
-
 #----------------------------------------------
 # load noise data
 
@@ -88,7 +87,8 @@ map_airports <- ggplot()+
         data = bula,
         mapping = aes(geometry = geometry),
         fill = NA,
-        col = "gray"
+        col = "grey70",
+        linewidth = 0.8
     )+
     geom_sf(
         data = airports_main,

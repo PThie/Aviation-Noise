@@ -180,7 +180,7 @@ wk_base_est_discl <- est_fm_distcluster(
 etable(
     wk_base_est_gridcl, wk_base_est_municcl, wk_base_est_discl,
     signif.code = c("***" = 0.01, "**" = 0.05, "*" = 0.10),
-    digits = "r3", se = "hetero",
+    digits = "r3",
     headers = c("gridclust", "municclust", "distrclust")
 )
 
@@ -188,7 +188,7 @@ etable(
 esttex(
     wk_base_est_gridcl, wk_base_est_municcl, wk_base_est_discl,
     file = file.path(output_path, "regressions/base_wk_cluster.tex"),
-    digits = "r3", replace = TRUE, dict = tablabel_char, se = "hetero",
+    digits = "r3", replace = TRUE, dict = tablabel_char,
     signif.code = c("***" = 0.01, "**" = 0.05, "*" = 0.10),
     headers = c("gridclust", "municclust", "distrclust")
 )

@@ -61,6 +61,17 @@ airport_locations <- qs::qread(
     )
 )
 
+#----------------------------------------------
+# noise contour
+
+# main airports
+haupt_contour <- qs::qread(
+    file.path(
+        data_path,
+        "Contour_Maps/main_airports_contour.qs"
+    )
+)
+
 ################################################################
 # Preparation                                                  #
 ################################################################
@@ -404,7 +415,6 @@ etable(
     digits = "r3", se = "hetero"
 )
 
-
 ################################################################
 # Time trend                                                   #
 ################################################################
@@ -615,7 +625,7 @@ etable(
 esttex(
     mod_wk_placebo, wk_base_trend, wk_base_est_pop, wk_base_est_hh,
     file = file.path(output_path, "regressions/robust_set_1.tex"),
-    digits = "r3", replace = TRUE, dict = tablabel_char,
+    digits = "r3", replace = TRUE, dict = tablabel_char, se = "hetero",
     signif.code = c("***" = 0.01, "**" = 0.05, "*" = 0.10),
     headers = c("placebo", "trend", "pop_restr", "hh_restr"),
     drop = "months"
@@ -625,7 +635,7 @@ esttex(
 esttex(
     wk_base_nz, wk_base_est_250mgrid, wk_base_est_500mgrid, wk_base_est_5kmgrid,
     file = file.path(output_path, "regressions/robust_set_2.tex"),
-    digits = "r3", replace = TRUE, dict = tablabel_char,
+    digits = "r3", replace = TRUE, dict = tablabel_char, se = "hetero",
     signif.code = c("***" = 0.01, "**" = 0.05, "*" = 0.10),
     headers = c("without NZ", "grid FE 250m", "grid FE 500m", "grid FE 5km")
 )
@@ -791,7 +801,7 @@ for(airport in airport_list){
 dist <- cbind(airport_list, dist_mean, dist_median, dist_max)
 names(dist) <- c("airports", "mean", "median", "max")
 
-write.xlsx(
+openxlsx::write.xlsx(
     dist,
     file.path(
         output_path,
