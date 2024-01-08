@@ -47,6 +47,26 @@ controls <- c(
     "distance_all_airports_building"
 )
 
+controls_with_time <- c(
+    "alter * months", "alter_squ * months", "wohnflaeche * months", "wohnflaeche_squ * months", 
+    "etage * months", "etageUNBEKANNT * months", "balkon * months", "balkonUNBEKANNT * months",
+    "as.factor(objektzustand) * months", "objektzustandUNBEKANNT * months", "zimmeranzahl * months",
+    "einbaukueche * months", "einbaukuecheUNBEKANNT * months", "garten * months", "gartenUNBEKANNT * months",
+    "as.factor(heizungsart) * months", "heizungsartUNBEKANNT * months", "as.factor(ausstattung) * months", "ausstattungUNBEKANNT * months",
+    "badezimmer * months", "badezimmerUNBEKANNT * months",
+    "distance_largcenter * months", "distance_medcenter * months", "distance_smalcenter * months", 
+    "distance_industry * months", "distance_railroads * months", "distance_streets * months",
+    "distance_all_airports_building * months"
+)
+
+#----------------------------------------------
+# for apartments add factor variable of airports
+wk_housing <- wk_housing |>
+    mutate(
+        airportFE = as.factor(closest_main_airports),
+        plzFE = as.factor(plz)
+    )
+
 ################################################################
 # estimation functions                                         #
 ################################################################
@@ -100,9 +120,60 @@ reg_base_allring_lockdown <- function(dep_var, cnt, fixef = c("none", "time", "r
     return(fm)
 }
 
+# define different formula including an unconditional estimation
+reg_base_unconditional <- function(dep_var, incl_controls = c("yes", "no"), other_fe = c("airport", "zipcode")) {
+    # leave out controls (unconditional regression) or not
+    if(incl_controls == "yes") {
+        fm <- formula(
+            paste(dep_var, " ~",
+                paste(controls, collapse = " + "),
+                # coefficient of interest (interaction term)
+                paste("+ fir_lockdown * con_ring0"),
+                "| months + r1_id"
+            )
+        )
+    } else {
+        fm <- formula(
+            paste(dep_var, " ~",
+                # coefficient of interest (interaction term)
+                paste("+ fir_lockdown * con_ring0"),
+                "| months + r1_id"
+            )
+        )
+    }
+
+    # using airport FE instead of grid FE
+    if(other_fe == "airport"){
+        fm <- formula(
+            paste(dep_var, " ~",
+                paste(controls, collapse = " + "),
+                # coefficient of interest (interaction term)
+                paste("+ fir_lockdown * con_ring0"),
+                "| months + airportFE"
+            )
+        )
+    } else if(other_fe == "zipcode"){
+        fm <- formula(
+            paste(dep_var, " ~",
+                paste(controls, collapse = " + "),
+                # coefficient of interest (interaction term)
+                paste("+ fir_lockdown * con_ring0"),
+                "| months + plzFE"
+            )
+        )
+    }
+
+    # return results
+    return(fm)
+}
+
 # define estimation function
 est_fm <- function(df, dependent, contr, FE){
     feols(fml = reg_base_allring_lockdown(dep_var = dependent, cnt = contr, fixef = FE), data = df)
+}
+
+est_fm_uncond <- function(df, dependent, contr, FE) {
+    feols(fml = reg_base_unconditional(dep_var = dependent, incl_controls = contr, other_fe = FE), data = df)
 }
 
 #----------------------------------------------
@@ -131,11 +202,28 @@ wk_base_est_timeFE <- est_fm(df = wk_housing, dependent = "ln_flatprice", contr 
 wk_base_est_regionFE <- est_fm(df = wk_housing, dependent = "ln_flatprice", contr = controls, FE = "region")
 wk_base_est_bothFE <- est_fm(df = wk_housing, dependent = "ln_flatprice", contr = controls, FE = "both")
 
+wk_base_est_unconditional <- est_fm_uncond(df = wk_housing, dependent = "ln_flatprice", contr = "no", FE = "no")
+wk_base_est_airportFE <- est_fm_uncond(df = wk_housing, dependent = "ln_flatprice", contr = "yes", FE = "airport")
+wk_base_est_zipcodeFE <- est_fm_uncond(df = wk_housing, dependent = "ln_flatprice", contr = "yes", FE = "zipcode")
+wk_base_est_standard <- est_fm_uncond(df = wk_housing, dependent = "ln_flatprice", contr = "yes", FE = "no")
+
 # display results
 etable(
     wk_base_est_ols, wk_base_est_timeFE, wk_base_est_regionFE, wk_base_est_bothFE,
     signif.code = c("***" = 0.01, "**" = 0.05, "*" = 0.10),
     digits = "r3", se = "hetero"
+)
+
+etable(
+    wk_base_est_ols, wk_base_est_timeFE, wk_base_est_regionFE, wk_base_est_bothFE,
+    signif.code = c("***" = 0.01, "**" = 0.05, "*" = 0.10), drop = "months",
+    digits = "r3", se = "hetero"
+)
+
+etable(
+    wk_base_est_bothFE,
+    signif.code = c("***" = 0.01, "**" = 0.05, "*" = 0.10),
+    digits = "r3", se = "hetero", drop = "months"
 )
 
 # export
@@ -145,6 +233,90 @@ esttex(
     digits = "r3", replace = TRUE, dict = tablabel_char, se = "hetero",
     signif.code = c("***" = 0.01, "**" = 0.05, "*" = 0.10)
 )
+
+esttex(
+    wk_base_est_unconditional, wk_base_est_airportFE, wk_base_est_standard,
+    file = file.path(output_path, "regressions/base_wk_unconditional.tex"),
+    digits = "r3", replace = TRUE, dict = tablabel_char, se = "hetero",
+    signif.code = c("***" = 0.01, "**" = 0.05, "*" = 0.10)
+)
+
+esttex(
+    wk_base_est_zipcodeFE,
+    file = file.path(output_path, "regressions/base_wk_zipcodeFE.tex"),
+    digits = "r3", replace = TRUE, dict = tablabel_char, se = "hetero",
+    signif.code = c("***" = 0.01, "**" = 0.05, "*" = 0.10)
+)
+
+################################################################
+# baseline apartment prices with time interaction              #
+################################################################
+
+# run regression
+wk_base_est_time_interaction <- est_fm(df = wk_housing, dependent = "ln_flatprice", contr = controls_with_time, FE = "both")
+
+# print results
+etable(
+    wk_base_est_time_interaction,
+    signif.code = c("***" = 0.01, "**" = 0.05, "*" = 0.10),
+    digits = "r3", se = "hetero",
+    drop = "months"
+)
+
+# export once complete and once without the month interactions
+esttex(
+    wk_base_est_time_interaction,
+    file = file.path(output_path, "regressions/base_wk_char_interaction_complete.tex"),
+    digits = "r3", replace = TRUE, dict = tablabel_char, se = "hetero",
+    signif.code = c("***" = 0.01, "**" = 0.05, "*" = 0.10)
+)
+
+esttex(
+    wk_base_est_time_interaction,
+    file = file.path(output_path, "regressions/base_wk_char_interaction_short.tex"),
+    digits = "r3", replace = TRUE, dict = tablabel_char, se = "hetero",
+    drop = "months",
+    signif.code = c("***" = 0.01, "**" = 0.05, "*" = 0.10)
+)
+
+################################################################
+# Frankfurt dummy                                              #
+################################################################
+
+# add Frankfurt dummy
+wk_housing <- wk_housing |>
+    mutate(
+        frankfurt_treat = case_when(
+            closest_main_airports == "EDDF" & con_ring0 == 1 ~ 1,
+            TRUE ~ 0
+        ),
+        frankfurt_control = case_when(
+            closest_main_airports == "EDDF" & con_ring0 == 0 ~ 1,
+            TRUE ~ 0
+        )
+    )
+
+# define formula
+fm <- formula(
+    paste("ln_flatprice ~",
+        paste(c(controls, "frankfurt_treat", "frankfurt_control"), collapse = " + "),
+        # coefficient of interest (interaction term)
+        paste("+ fir_lockdown * con_ring0"),
+        "| months"
+    )
+)
+
+# run estimation
+frankfurt_est <- feols(fml = fm, data = wk_housing, se = "hetero")
+
+# show results
+etable(
+    frankfurt_est,
+    signif.code = c("***" = 0.01, "**" = 0.05, "*" = 0.10),
+    digits = "r3", se = "hetero"
+)
+
+# NOTE: Why is frankfurt dummy removed from estimation?
 
 ################################################################
 # clustering                                                   #
