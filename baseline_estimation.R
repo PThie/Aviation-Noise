@@ -13,7 +13,9 @@ read_housing <- function(filename) {
     fln <- paste0(filename, ".qs")
     dta <- qs::qread(
         file.path(
-            data_path, "housing", fln
+            data_path,
+            "housing",
+            fln
         )
     )
     return(dta)
