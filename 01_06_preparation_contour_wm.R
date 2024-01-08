@@ -13,14 +13,16 @@
 # load data
 red <- qs::qread(
     file.path(
-        data_path, "housing/WM_prepared.qs"
+        data_path,
+        "housing/WM_prepared.qs"
     )
 )
 
 # contour data
 airport_contour <- qs::qread(
     file.path(
-        data_path, "Contour_Maps/all_airports_contour.qs"
+        data_path,
+        "Contour_Maps/all_airports_contour.qs"
     )
 )
 
