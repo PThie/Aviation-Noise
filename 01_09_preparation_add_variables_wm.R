@@ -5,7 +5,8 @@
 # load housing data
 red <- qs::qread(
     file.path(
-        data_path, "housing/WK_contour.qs"
+        data_path,
+        "housing/WM_contour.qs"
     )
 )
 
@@ -24,6 +25,7 @@ industry_noise <- st_read(
         "umgebungslaerm/industrie/Ballungsraeume/Lden/Aggind_Lden_17.shp"
     ),
     quiet = TRUE
+    
 )
 
 # railroad noise
@@ -235,6 +237,6 @@ red$distance_streets <- as.numeric(
 qs::qsave(
     red,
     file.path(
-        data_path, "housing/WK_complete.qs"
+        data_path, "housing/WM_complete.qs"
     )
 )

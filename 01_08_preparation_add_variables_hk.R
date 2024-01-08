@@ -5,7 +5,8 @@
 # load housing data
 red <- qs::qread(
     file.path(
-        data_path, "housing/WM_contour.qs"
+        data_path,
+        "housing/HK_contour.qs"
     )
 )
 
@@ -236,6 +237,6 @@ red$distance_streets <- as.numeric(
 qs::qsave(
     red,
     file.path(
-        data_path, "housing/WM_complete.qs"
+        data_path, "housing/HK_complete.qs"
     )
 )
