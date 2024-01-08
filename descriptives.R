@@ -6,7 +6,8 @@
 # housing data
 housing_wk <- qs::qread(
     file.path(
-        data_path, "housing/WK_complete.qs"
+        data_path,
+        "housing/WK_complete.qs"
     )
 )
 
@@ -23,7 +24,8 @@ airport_locations <- qs::qread(
 # load state boundaries
 bula <- st_read(
     file.path(
-        data_gebiete, "Bundesland/2019/VG250_LAN.shp"
+        data_gebiete,
+        "Bundesland/2019/VG250_LAN.shp"
     ),
     quiet = TRUE
 )
@@ -45,7 +47,8 @@ haupt_contour <- qs::qread(
 
 noise_data <- read.fst(
     file.path(
-        data_path, "Hauptflughaefen_Laerm/avg_month.fst"
+        data_path,
+        "Hauptflughaefen_Laerm/avg_month.fst"
     )
 )
 
@@ -364,19 +367,19 @@ avg_freight <- freight_carry |>
 
 # calculate average for periods before and after lockdown
 before_lock <- as.numeric(
-        flight_act |>
-            filter(year_mon <= "2020-03") |>
-            summarise(
-                avg_flight_act = mean(flight_activity, na.rm = TRUE)
-            )
+    flight_act |>
+        filter(year_mon <= "2020-03") |>
+        summarise(
+            avg_flight_act = mean(flight_activity, na.rm = TRUE)
+        )
 )
 
 after_lock <- as.numeric(
-        flight_act |>
-            filter(year_mon > "2020-03") |>
-            summarise(
-                avg_flight_act = mean(flight_activity, na.rm = TRUE)
-            )
+    flight_act |>
+        filter(year_mon > "2020-03") |>
+        summarise(
+            avg_flight_act = mean(flight_activity, na.rm = TRUE)
+        )
 )
 
 ###############################################################
@@ -624,6 +627,7 @@ tmap_save(
 ###############################################################
 # Plotting price development                                  #
 ###############################################################
+
 prep_est_mod <- function(housing_data){
     #' @title Preparation for estimation
     #' 
