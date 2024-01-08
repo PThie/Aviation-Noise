@@ -266,7 +266,7 @@ scale_x_discrete(
 )+
 labs(
     x = "",
-    y = "Coefficients and 90% CI"
+    y = "Point estimates and 90% CI"
 )+
 theme(
     panel.background = element_blank(),
