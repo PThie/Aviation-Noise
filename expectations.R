@@ -138,7 +138,6 @@ colnames(stocks_dax) <- c(
     "mean_close_dax"
 )
 
-# CONTINUE HERE
 #----------------------------------------------
 # normalized by 2018
 
@@ -181,12 +180,13 @@ month_labels <- c(
 mytheme <- theme(
     panel.background = element_blank(),
     axis.text.x = element_text(angle = 45, hjust = 1, size = 15),
-    axis.text.y = element_text(size = 15),
+    axis.text.y = element_text(size = 16),
     axis.line = element_line(colour = "black"),
     axis.title.y = element_text(size = 18),
-    legend.text = element_text(size = 15),
+    legend.text = element_text(size = 17),
     axis.ticks.length = unit(0.25, "cm"),
-    legend.key = element_blank()
+    legend.key = element_blank(),
+    legend.position = "bottom"
 )
 
 # line thickness
