@@ -68,19 +68,25 @@ owntheme <- theme(
 
 # directory
 main_path <- "N:/Corona_FDZ/Fluglaerm_PT"
+
 # airport related data and general data storage
 data_path <- file.path(main_path, "data")
+
 # source of the RED data
 data_immo <- file.path(
     "M:/_FDZ/RWI-GEO/RWI-GEO-RED/daten/On-site/",
     immo_version
 )
+
 # source of data on boundaries and regions
 data_gebiete <- "M:/_FDZ/interne Daten/Gebietseinheit/"
+
 # source of the coding files
 code_path <- file.path(main_path, "code")
+
 # auxiliary code
 code_aux <- file.path(main_path, "code/aux_code")
+
 # output path
 output_path <- file.path(main_path, "output")
 
@@ -119,8 +125,6 @@ source(
     )
 )
 
-
-# TODO: Needs rework (was never complete)
 ################################################################
 # Preparation Files                                            #
 ################################################################
@@ -135,91 +139,192 @@ source(
     )
 )
 
-# basic preparation of the RED housing data -------------------------------
+#----------------------------------------------
+# Preparation of raw housing data
+# Creates the files: TYPES_prepared.qs (with TYPES equals WK, HK, or WM)
 
-# source(file.path(codePath, "01_02_preparation_basic_wm.R"), encoding = "UTF-8")
-# source(file.path(codePath, "01_03_preparation_basic_wk.R"), encoding = "UTF-8")
+# Preparation of the apartment sales data
+source(
+    file.path(
+        code_path,
+        "01_01_preparation_basic_wk.R"
+    )
+)
 
-# Preparation Contour and housing data ------------------------------------
+# Preparation of the houses sales data
+source(
+    file.path(
+        code_path,
+        "01_02_preparation_basic_hk.R"
+    )
+)
 
-# source(file.path(codePath, "01_06_preparation_contour_wm.R"), encoding = "UTF-8")
-# source(file.path(codePath, "01_07_preparation_contour_wk.R"), encoding = "UTF-8")
+# Preparation of the apartment rents data
+source(
+    file.path(
+        code_path,
+        "01_03_preparation_basic_wm.R"
+    )
+)
 
-# Preparation flight activity data ----------------------------------------
-# adds the number of flights to the housing data
+#----------------------------------------------
+# Combine housing data and contour data for each housing type
+# Creates the files: TYPES_contour.qs (with TYPES equals WK, HK, or WM)
 
-# source(file.path(codePath, "01_08_preparation_flight_activity.R"), encoding = "UTF-8")
+source(
+    file.path(
+        code_path,
+        "01_04_preparation_contour_wk.R"
+    )
+)
 
+source(
+    file.path(
+        code_path,
+        "01_05_preparation_contour_hk.R"
+    )
+)
 
-# Traveling time ----------------------------------------------------------
-# defines the control group using the driving time to the respective airport
+source(
+    file.path(
+        code_path,
+        "01_06_preparation_contour_wm.R"
+    )
+)
 
-# source(file.path(codePath, "01_09_traveling_time.R"), encoding = "UTF-8")
+#----------------------------------------------
+# Add additional control variables to the final housing data sets for each
+# housing type (WK, HK, WM)
+# Additional variables include: Distance to regional centers and other noise
+# sources
+# Creates the files: TYPES_complete.qs (with TYPES equals WK, HK, or WM)
 
-# exports the files:
-# - hk_time.fst
-# - wm_time.fst
-# - wk_time.fst
-# which are the final data sets. It defines the control group to 25 minutes from the respective airport and covers a period of
-# Jan 2019 to Dec 2020
+source(
+    file.path(
+        code_path,
+        "01_07_preparation_add_variables_wk.R"
+    )
+)
 
-################################################################
-# Noise data                                                   #
-################################################################
+source(
+    file.path(
+        code_path,
+        "01_08_preparation_add_variables_hk.R"
+    )
+)
 
-# aggregate the noise data to monthly values
-# source(file.path(codePath, "01_10_aggregation_noise.R"), encoding = "UTF-8")
+source(
+    file.path(
+        code_path,
+        "01_09_preparation_add_variables_wm.R"
+    )
+)
+
+#----------------------------------------------
+# Preparation of noise data (based on measuring stations)
+
+source(
+    file.path(
+        code_path,
+        "01_10_preparation_aggregation_noise.R"
+    )
+)
 
 ################################################################
 # Mapping and Descriptives                                     #
 ################################################################
 
-# general descriptives and mapping ----------------------------------------
-# plots the different airports on a Germany map
-# plots noise levels over time
-# creates descriptive tables
-# creates number of observations per ring
+#----------------------------------------------
+# Descriptives for comparing treatment and control region
+# Using grid-level data
 
-# source(file.path(codePath, "02_01_mapping_descriptives.R"), encoding = "UTF-8")
+source(
+    file.path(
+        code_path,
+        "02_01_descriptives_griddata.R"
+    )
+)
 
-# maps of treated and control ---------------------------------------------
-# maps for each airport the treated and the non-treated
+#----------------------------------------------
+# Descriptives for the housing data
 
-# source(file.path(codePath, "02_02_mapping_groups.R"), encoding = "UTF-8")
+source(
+    file.path(
+        code_path,
+        "02_02_descriptives_housing_data.R"
+    )
+)
+
+#----------------------------------------------
+# Descriptives for plotting the airport locations and the contour
+
+source(
+    file.path(
+        code_path,
+        "02_03_descriptives_contour_airport_locations.R"
+    )
+)
+
+#----------------------------------------------
+# Plotting the noise data
+
+source(
+    file.path(
+        code_path,
+        "02_04_descriptives_noise_data.R"
+    )
+)
+
+#----------------------------------------------
+# Plotting the flight activity data
+
+source(
+    file.path(
+        code_path,
+        "02_05_descriptives_flight_activity.R"
+    )
+)
+
+#----------------------------------------------
+# Plotting the stock development
+
+source(
+    file.path(
+        code_path,
+        "02_06_descriptives_stocks_expectations.R"
+    )
+)
 
 ################################################################
 # Estimation Files                                             #
 ################################################################
 
-# estimation with contour rings -------------------------------------------
-# estimation for housing data (both types WM and HK) under different specifications (see the file itself)
+#----------------------------------------------
+# Baseline estimation
 
-# source(file.path(codePath, "03_01_estimation_hk.R"), encoding = "UTF-8")
-# source(file.path(codePath, "03_02_estimation_wm.R"), encoding = "UTF-8")
-# source(file.path(codePath, "03_03_estimation_wk.R"), encoding = "UTF-8")
+source(
+    file.path(
+        code_path,
+        "03_01_estimation_baseline.R"
+    )
+)
 
+#----------------------------------------------
+# Heterogeneity Analysis
 
+source(
+    file.path(
+        code_path,
+        "03_02_estimation_heterogeneity.R"
+    )
+)
 
+#----------------------------------------------
+# Robustness Analysis
 
-
-# needed? -----------------------------------------------------------------
-
-
-
-
-
-
-################################################################
-# Common Trend                                                 #
-################################################################
-
-# plots the common trend for the four selected airports (TXL, DUS, FRA, HAM)
-# and for four contour rings (6 (i.e. 1+2), 3, 4, 5)
-
-# source(file.path(codePath, "02_common_trend.R"), encoding = "UTF-8")
-
-################################################################
-# Interpolation                                                #
-################################################################
-
-# source(file.path(codePath, "02_interpolation.R"), encoding = "UTF-8")
+source(
+    file.path(
+        code_path,
+        "03_03_estimation_robustness.R"
+    )
+)
