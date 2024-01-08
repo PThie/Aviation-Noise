@@ -57,7 +57,7 @@ owntheme <- theme(
     panel.background = element_rect(colour = "white", fill = "white"),
     axis.line = element_line(linewidth = 0.5, linetype = "solid", color = "black"),
     legend.key.size = unit(1, "cm"),
-    legend.text = element_text(size = 11),
+    legend.text = element_text(size = 15),
     axis.ticks.length = unit(0.25, "cm"),
     legend.key = element_blank()
 )
