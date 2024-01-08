@@ -125,6 +125,16 @@ source(
 # Preparation Files                                            #
 ################################################################
 
+#----------------------------------------------
+# preparation of airport contours
+
+source(
+    file.path(
+        code_path,
+        "01_00_preparation_airport_data.R"
+    )
+)
+
 # basic preparation of the RED housing data -------------------------------
 
 # source(file.path(codePath, "01_02_preparation_basic_wm.R"), encoding = "UTF-8")
