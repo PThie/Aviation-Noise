@@ -759,13 +759,16 @@ plot_wk <- ggplot(
         se = FALSE,
         aes(group = lockdown, x = quarter, y = mean_price), col = "grey60"
     )+
-    owntheme
+    owntheme+
+    theme(
+        legend.position = "bottom"
+    )
 
 # export
 ggsave(
     plot = plot_wk,
     file.path(
-        output_path, "graphs/wk_price_development.png"
+        output_path, "graphs/alternative_style_diss/wk_price_development.png"
     ), 
     width = 8,
     height = 6
@@ -807,7 +810,7 @@ plot_count_overall <- ggplot(
             "0" = "< 55dB (control)",
             "1" = "\u2265 55dB (treated)"
         ),
-        name = ""
+        name = "Groups"
     )+
     scale_y_continuous(
         breaks = seq(0, 10000, 1000),
@@ -827,7 +830,14 @@ plot_count_overall <- ggplot(
         x = "",
         y = "Observations"
     )+
-    owntheme
+    owntheme+
+    theme(
+        legend.position = "bottom",
+        legend.title = element_text(size = 19),
+        axis.text.x = element_text(size = 18),
+        axis.text.y = element_text(size = 18),
+        axis.title.y = element_text(size = 22)
+    )
 
 ggsave(
     plot = plot_count_overall,
@@ -860,20 +870,32 @@ col <- met.brewer(
     n = 9
 )
 
+# NOTE: treat Frankfurt differently (make it bold)
 plot_count_airports <- ggplot()+
     geom_line(
-        data = count_airport_n |> filter(con_ring0 == 0),
+        data = count_airport_n |> filter(con_ring0 == 0 & closest_main_airports != "EDDF"),
         mapping = aes(
             x = quarter,
             y = n,
             group = factor(closest_main_airports),
             col = factor(closest_main_airports),
-            linetype = "control"            
+            linetype = "control"
         ),
         linewidth = 1
     )+
     geom_line(
-        data = count_airport_n |> filter(con_ring0 == 1),
+        data = count_airport_n |> filter(con_ring0 == 0 & closest_main_airports == "EDDF"),
+        mapping = aes(
+            x = quarter,
+            y = n,
+            group = 1,
+            col = factor(closest_main_airports),
+            linetype = "control"
+        ),
+        linewidth = 2
+    )+
+    geom_line(
+        data = count_airport_n |> filter(con_ring0 == 1 & closest_main_airports != "EDDF"),
         mapping = aes(
             x = quarter,
             y = n,
@@ -882,6 +904,17 @@ plot_count_airports <- ggplot()+
             linetype = "treated"
         ),
         linewidth = 1
+    )+
+    geom_line(
+        data = count_airport_n |> filter(con_ring0 == 1 & closest_main_airports == "EDDF"),
+        mapping = aes(
+            x = quarter,
+            y = n,
+            group = 1,
+            col = factor(closest_main_airports),
+            linetype = "treated"
+        ),
+        linewidth = 2
     )+
     scale_linetype_manual(
         values = c(
@@ -927,7 +960,16 @@ plot_count_airports <- ggplot()+
         x = "",
         y = "Observations"
     )+
-    owntheme
+    owntheme+
+    theme(
+        legend.position = "bottom",
+        legend.box = "vertical",
+        legend.margin = margin(),
+        legend.title = element_text(size = 19),
+        axis.text.x = element_text(size = 18),
+        axis.text.y = element_text(size = 18),
+        axis.title.y = element_text(size = 22)
+    )
 
 ggsave(
     plot = plot_count_airports,
@@ -953,7 +995,7 @@ prep_descriptives <- function(housing, price_variable){
     # select the main variables (part of regression)
     housing <- housing |>
         select(
-            "alter", "wohnflaeche", "etage", "balkon", "objektzustand", 
+            "ln_flatprice", "alter", "wohnflaeche", "etage", "balkon", "objektzustand",
             "einbaukueche", "garten", "heizungsart", "ausstattung", "zimmeranzahl",
             "badezimmer", "distance_largcenter", "distance_medcenter", "distance_smalcenter",
             "distance_industry", "distance_railroads", "distance_streets", "distance_main_airports_building",
@@ -1077,15 +1119,21 @@ reg_uncond_did <- function(depvar){
             se = "hetero"
     )
 
+    print(etable(
+        est_mod,
+        signif.code = c("***" = 0.01, "**" = 0.05, "*" = 0.10),
+        se = "hetero"
+    ))
+
     # extract interaction terms (i.e. unconditional DiD)
     est_mod_df <- est_mod$coeftable[4, c("Estimate", "Std. Error")] |>
         t() |>
         as.data.frame()
-    
-    # # rename rows and columns
+
+    # rename rows and columns
     colnames(est_mod_df) <- c("estimate", "std_error")
     
-    # # add variable name
+    # add variable name
     # round other variables
     est_mod_df <- est_mod_df |> 
         mutate(
@@ -1132,7 +1180,7 @@ des_table_wide <- des_table_wide |>
         match(
             variables,
             c(
-                "kaufpreis", "wohnflaeche", "zimmeranzahl", "alter", "ausstattung",
+                "ln_flatprice", "kaufpreis", "wohnflaeche", "zimmeranzahl", "alter", "ausstattung",
                 "badezimmer", "etage", "heizungsart", "objektzustand", "balkon",
                 "garten", "einbaukueche", "distance_smalcenter", "distance_medcenter",
                 "distance_largcenter", "distance_main_airports_building",
