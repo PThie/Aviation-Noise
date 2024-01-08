@@ -1,4 +1,11 @@
 #############################################
+# Description                               #
+#############################################
+
+# This file generates a descriptive plot showing the development of aviation
+# stocks as well as the DAX 40 as representative for the German economy.
+
+#############################################
 # Stocks                                    #
 #############################################
 
