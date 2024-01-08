@@ -1,4 +1,11 @@
 ######################################################
+# Description                                        #
+######################################################
+
+# This function generates descriptive statistics for the treatment and control
+# groups based on the grid-data given by RWI-GEO-GRID.
+
+######################################################
 # Load data                                          #
 ######################################################
 
