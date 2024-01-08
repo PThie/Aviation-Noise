@@ -864,7 +864,8 @@ static_distance_plot <- tm_shape(plot_union_static)+
     tm_shape(haupt_contour[haupt_contour$icao == "EDDF", ])+
     tm_polygons(col = "darkorange2")+
     tm_shape(main_airports[main_airports$icao == "EDDF", ])+
-    tm_dots(col = "black", size = 1)
+    tm_dots(col = "black", size = 1)+
+    tm_layout(frame = FALSE)
 
 tmap_save(
     static_distance_plot,
@@ -894,7 +895,8 @@ dynamic_distance_plot <- tm_shape(plot_union_dynamic)+
     tm_shape(haupt_contour[haupt_contour$icao == "EDDF", ])+
     tm_polygons(col = "darkorange2")+
     tm_shape(main_airports[main_airports$icao == "EDDF", ])+
-    tm_dots(col = "black", size = 1)
+    tm_dots(col = "black", size = 1)+
+    tm_layout(frame = FALSE)
 
 tmap_save(
     dynamic_distance_plot,
