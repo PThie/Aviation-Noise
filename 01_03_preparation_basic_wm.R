@@ -5,7 +5,8 @@
 # housing data
 red_org <- haven::read_dta(
     file.path(
-        data_immo, "WM_allVersions_ohneText.dta"
+        data_immo,
+        "WM_allVersions_ohneText.dta"
     )
 )
 
