@@ -9,19 +9,6 @@
 # Load Data                                                    #
 ################################################################
 
-# read function
-read_housing <- function(filename) {
-    fln <- paste0(filename, ".qs")
-    dta <- qs::qread(
-        file.path(
-            data_path,
-            "housing",
-            fln
-        )
-    )
-    return(dta)
-}
-
 wk_housing <- read_housing(filename = "WK_complete")
 
 ################################################################
