@@ -125,6 +125,14 @@ source(
     )
 )
 
+# reading housing data
+source(
+    file.path(
+        code_path,
+        "functions/read_housing.R"
+    )
+)
+
 ################################################################
 # Preparation Files                                            #
 ################################################################
