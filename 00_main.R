@@ -49,7 +49,7 @@ utmcrs <- 32632
 owndpi <- 800
 
 # ggplot theme (line graphs)
-owntheme <- theme(
+owntheme <- ggplot2::theme(
     axis.text.x = element_text(size = 14, angle = 45, hjust = 1),
     axis.title.x = element_blank(),
     axis.title.y = element_text(size = 17, vjust = 2),
