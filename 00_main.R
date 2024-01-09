@@ -44,7 +44,7 @@ suppressPackageStartupMessages(
 # Globals                                                      #
 ################################################################
 
-immo_version <- "v7.1"
+immo_version <- "v9"
 utmcrs <- 32632
 owndpi <- 800
 
