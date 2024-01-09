@@ -10,12 +10,17 @@
 
 #----------------------------------------------
 # housing data
+
 housing_wk <- qs::qread(
     file.path(
         data_path,
         "housing/WK_complete.qs"
     )
 )
+
+# restrict data to the maximum time frame
+housing_wk <- housing_wk |>
+    filter(year_mon_end <= time_horizon)
 
 ###############################################################
 # Plotting price development                                  #
