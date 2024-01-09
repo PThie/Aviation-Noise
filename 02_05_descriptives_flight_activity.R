@@ -32,7 +32,7 @@ df_list_raw <- lapply(
 months_names <- substring(
     file_list,
     first = 68,
-    last = nchar(file.list) - 5
+    last = nchar(file_list) - 5
 )
 
 # assign names to the data list
@@ -103,19 +103,19 @@ avg_flight_activity <- flight_act |>
 
 # calculate average for periods before and after lockdown
 before_lock <- as.numeric(
-        flight_act |>
-            filter(year_mon <= "2020-03") |>
-            summarise(
-                avg_flight_act = mean(flight_activity, na.rm = TRUE)
-            )
+    flight_act |>
+        filter(year_mon <= "2020-03") |>
+        summarise(
+            avg_flight_act = mean(flight_activity, na.rm = TRUE)
+        )
 )
 
 after_lock <- as.numeric(
-        flight_act |>
-            filter(year_mon > "2020-03") |>
-            summarise(
-                avg_flight_act = mean(flight_activity, na.rm = TRUE)
-            )
+    flight_act |>
+        filter(year_mon > "2020-03") |>
+        summarise(
+            avg_flight_act = mean(flight_activity, na.rm = TRUE)
+        )
 )
 
 #----------------------------------------------
@@ -125,7 +125,7 @@ after_lock <- as.numeric(
 month_labels <- c(
     "Jan 2018", "May 2018", "Sep 2018", "Jan 2019", "May 2019", "Sep 2019", 
     "Jan 2020", "May 2020", "Sep 2020", "Jan 2021", "May 2021", "Sep 2021",
-    "Jan 2022"
+    "Jan 2022", "May 2022", "Sep 2022", "Jan 2023"
 )
 
 # define plot date
@@ -133,11 +133,6 @@ avg_flight_activity <- avg_flight_activity |>
     mutate(
         plot_date = as.yearmon(year_mon)
     )
-
-# restrict to June 2022
-# because housing data ends there
-avg_flight_activity <- avg_flight_activity |>
-    filter(year_mon <= "2022-06")
 
 # define lockdown time
 lock <- as.numeric(
@@ -162,7 +157,7 @@ plot_avg_flightact <- ggplot(avg_flight_activity)+
     geom_segment(
         aes(x = lock, xend = lock, y = 2000, yend = 18000),
         linetype = 3,
-        size = 1
+        linewidth = 1
     )+
     # add averages before and after lockdown
     geom_segment(
@@ -197,6 +192,7 @@ ggsave(
 
 #----------------------------------------------
 # preparation
+
 prep_fracht <- function(data){
     # drop unwanted rows and columns
     data <- data[15:38, 10:11]
@@ -257,18 +253,18 @@ avg_freight <- freight_carry |>
 
 # calculate average for periods before and after lockdown
 before_lock <- as.numeric(
-    flight_act |>
+    freight_carry |>
         filter(year_mon <= "2020-03") |>
         summarise(
-            avg_flight_act = mean(flight_activity, na.rm = TRUE)
+            avg_flight_act = mean(freight_t, na.rm = TRUE)
         )
 )
 
 after_lock <- as.numeric(
-    flight_act |>
+    freight_carry |>
         filter(year_mon > "2020-03") |>
         summarise(
-            avg_flight_act = mean(flight_activity, na.rm = TRUE)
+            avg_flight_act = mean(freight_t, na.rm = TRUE)
         )
 )
 
@@ -282,6 +278,7 @@ after_lock <- as.numeric(
 #----------------------------------------------
 # reload data
 # turn list into data frame
+
 flight_act_complete <- bind_rows(df_list_people, .id = "id")
 
 # some cleaning
@@ -309,6 +306,7 @@ flight_act_complete <- flight_act_complete |>
 
 #----------------------------------------------
 # total sum
+
 sum_all_flight_act <- flight_act_complete |>
     group_by(year) |>
     summarise(sum_all_main = sum(flight_activity, na.rm = TRUE)) |>
@@ -339,6 +337,7 @@ sum_flight_act <- merge(
     sum_main_flight_act,
     by = "year"
 )
+
 sum_flight_act <- sum_flight_act |>
     mutate(
         share = (sum_analysis_main / sum_all_main) * 100
