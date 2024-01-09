@@ -31,12 +31,14 @@ wm_housing <- read_housing(filename = "WM_complete")
 
 #----------------------------------------------
 # apply prep function
+
 wk_housing <- prep_est(wk_housing)
 hk_housing <- prep_est(hk_housing)
 wm_housing <- prep_est(wm_housing)
 
 #----------------------------------------------
 # define housing characteristics (controls)
+
 controls <- c(
     "alter", "alter_squ", "wohnflaeche", "wohnflaeche_squ", 
     "etage", "etageUNBEKANNT", "balkon", "balkonUNBEKANNT",
