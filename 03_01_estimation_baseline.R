@@ -65,6 +65,7 @@ controls_with_time <- c(
 
 #----------------------------------------------
 # for apartments add factor variable of airports
+
 wk_housing <- wk_housing |>
     mutate(
         airportFE = as.factor(closest_main_airports),
@@ -182,6 +183,7 @@ est_fm_uncond <- function(df, dependent, contr, FE) {
 
 #----------------------------------------------
 # table labels (for TEX output)
+
 tablabel_char <- c(
     "alter" = "Age", "alter_squ" = "Age$^2$", "wohnflaeche" = "Living space", "wohnflaeche_squ" = "Living space$^2$", 
     "as.factor(objektzustand)2" = "Condition: First occupancy after reconstruction", "as.factor(objektzustand)3" = "Condition: Like new", "as.factor(objektzustand)4" = "Condition: Reconstructed",
