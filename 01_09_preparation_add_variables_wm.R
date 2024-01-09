@@ -60,50 +60,6 @@ red <- red |>
     )
 
 ################################################################
-# Adding three months intervalls for treatment time            #
-################################################################
-
-red <- red |>
-    mutate(
-        arpjun20 = case_when(
-            year_mon_end >= "2020-04" & year_mon_end <= "2020-06" ~ 1,
-            TRUE ~ 0
-        ),
-        julsep20 = case_when(
-            year_mon_end >= "2020-07" & year_mon_end <= "2020-09" ~ 1,
-            TRUE ~ 0
-        ),
-        octdec20 = case_when(
-            year_mon_end >= "2020-10" & year_mon_end <= "2020-12" ~ 1,
-            TRUE ~ 0
-        ),
-        janmar21 = case_when(
-            year_mon_end >= "2021-01" & year_mon_end <= "2021-03" ~ 1,
-            TRUE ~ 0
-        ),
-        aprjun21 = case_when(
-            year_mon_end >= "2021-04" & year_mon_end <= "2021-06" ~ 1,
-            TRUE ~ 0
-        ),
-        julsep21 = case_when(
-            year_mon_end >= "2021-07" & year_mon_end <= "2021-09" ~ 1,
-            TRUE ~ 0
-        ),
-        octdec21 = case_when(
-            year_mon_end >= "2021-10" & year_mon_end <= "2021-12" ~ 1,
-            TRUE ~ 0
-        ),
-        janmar22 = case_when(
-            year_mon_end >= "2022-01" & year_mon_end <= "2022-03" ~ 1,
-            TRUE ~ 0
-        ),
-        aprjun22 = case_when(
-            year_mon_end >= "2022-04" & year_mon_end <= "2022-06" ~ 1,
-            TRUE ~ 0
-        )
-    )
-
-################################################################
 # Adding regional centers                                      #
 ################################################################
 
