@@ -23,6 +23,16 @@ wk_housing <- prep_est(wk_housing)
 hk_housing <- prep_est(hk_housing)
 wm_housing <- prep_est(wm_housing)
 
+# restrict data to the maximum time frame
+wk_housing <- wk_housing |>
+    filter(year_mon_end <= time_horizon)
+
+hk_housing <- hk_housing |>
+    filter(year_mon_end <= time_horizon)
+
+wm_housing <- wm_housing |>
+    filter(year_mon_end <= time_horizon)
+
 #----------------------------------------------
 # define housing characteristics (controls)
 
@@ -208,12 +218,6 @@ etable(
 )
 
 etable(
-    wk_base_est_ols, wk_base_est_timeFE, wk_base_est_regionFE, wk_base_est_bothFE,
-    signif.code = c("***" = 0.01, "**" = 0.05, "*" = 0.10), drop = "months",
-    digits = "r3", se = "hetero"
-)
-
-etable(
     wk_base_est_bothFE,
     signif.code = c("***" = 0.01, "**" = 0.05, "*" = 0.10),
     digits = "r3", se = "hetero", drop = "months"
@@ -246,7 +250,12 @@ esttex(
 ################################################################
 
 # run regression
-wk_base_est_time_interaction <- est_fm(df = wk_housing, dependent = "ln_flatprice", contr = controls_with_time, FE = "both")
+wk_base_est_time_interaction <- est_fm(
+    df = wk_housing,
+    dependent = "ln_flatprice",
+    contr = controls_with_time,
+    FE = "both"
+)
 
 # print results
 etable(
@@ -273,51 +282,20 @@ esttex(
 )
 
 ################################################################
-# Frankfurt dummy                                              #
-################################################################
-
-# add Frankfurt dummy
-wk_housing <- wk_housing |>
-    mutate(
-        frankfurt_treat = case_when(
-            closest_main_airports == "EDDF" & con_ring0 == 1 ~ 1,
-            TRUE ~ 0
-        ),
-        frankfurt_control = case_when(
-            closest_main_airports == "EDDF" & con_ring0 == 0 ~ 1,
-            TRUE ~ 0
-        )
-    )
-
-# define formula
-fm <- formula(
-    paste("ln_flatprice ~",
-        paste(c(controls, "frankfurt_treat", "frankfurt_control"), collapse = " + "),
-        # coefficient of interest (interaction term)
-        paste("+ fir_lockdown * con_ring0"),
-        "| months"
-    )
-)
-
-# run estimation
-frankfurt_est <- feols(fml = fm, data = wk_housing, se = "hetero")
-
-# show results
-etable(
-    frankfurt_est,
-    signif.code = c("***" = 0.01, "**" = 0.05, "*" = 0.10),
-    digits = "r3", se = "hetero"
-)
-
-# NOTE: Why is frankfurt dummy removed from estimation?
-
-################################################################
 # clustering                                                   #
 ################################################################
 
 # cluster on grids
 est_fm_gridcluster <- function(df, dependent, contr, FE){
-    feols(fml = reg_base_allring_lockdown(dep_var = dependent, cnt = contr, fixef = FE), data = df, cluster = "r1_id")
+    feols(fml = reg_base_allring_lockdown(
+            dep_var = dependent,
+            cnt = contr,
+            fixef = FE
+        ),
+        data =
+        df,
+        cluster = "r1_id"
+    )
 }
 
 wk_base_est_gridcl <- est_fm_gridcluster(
@@ -375,7 +353,12 @@ controls_hk <- c(
 )
 
 # run regression
-hk_base_est <- est_fm(df = hk_housing, dependent = "ln_houseprice", contr = controls_hk, FE = "both")
+hk_base_est <- est_fm(
+    df = hk_housing,
+    dependent = "ln_houseprice",
+    contr = controls_hk,
+    FE = "both"
+)
 
 # display results
 etable(
@@ -389,7 +372,12 @@ etable(
 ################################################################
 
 # run regression
-wm_base_est <-  est_fm(df = wm_housing, dependent = "ln_rent_sqmeter", contr = controls, FE = "both")
+wm_base_est <-  est_fm(
+    df = wm_housing,
+    dependent = "ln_rent_sqmeter",
+    contr = controls,
+    FE = "both"
+)
 
 # display results
 etable(
@@ -446,7 +434,12 @@ controls_sales <- c(
 )
 
 # run regression
-comb_base_est <- est_fm(df = housing_comb, dependent = "ln_price", contr = controls_sales, FE = "both")
+comb_base_est <- est_fm(
+    df = housing_comb,
+    dependent = "ln_price",
+    contr = controls_sales,
+    FE = "both"
+)
 
 # display results
 etable(
