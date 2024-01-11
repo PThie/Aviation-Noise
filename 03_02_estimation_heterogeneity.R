@@ -87,7 +87,11 @@ prep_est_march <- function(housing_data, drop_march = FALSE){
                     year_mon_end >= "2021-07" & year_mon_end <= "2021-09" ~ "t+6",
                     year_mon_end >= "2021-10" & year_mon_end <= "2021-12" ~ "t+7",
                     year_mon_end >= "2022-01" & year_mon_end <= "2022-03" ~ "t+8",
-                    year_mon_end >= "2022-04" & year_mon_end <= "2022-06" ~ "t+9"
+                    year_mon_end >= "2022-04" & year_mon_end <= "2022-06" ~ "t+9",
+                    year_mon_end >= "2022-07" & year_mon_end <= "2022-09" ~ "t+10",
+                    year_mon_end >= "2022-10" & year_mon_end <= "2022-12" ~ "t+11",
+                    year_mon_end >= "2023-01" & year_mon_end <= "2023-03" ~ "t+12",
+                    year_mon_end >= "2023-04" & year_mon_end <= "2023-06" ~ "t+13"
                 ),
                 periods = as.factor(periods)
             )
