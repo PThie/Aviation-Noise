@@ -11,6 +11,7 @@
 
 #----------------------------------------------
 # grid data (microm)
+
 griddata_org <- haven::read_dta(
     "M:/_FDZ/RWI-GEO/RWI-GEO-GRID/daten/Original/Stata16/V12/microm_panel_05-20.dta"
 )
@@ -29,6 +30,7 @@ st_make_valid()
 
 #----------------------------------------------
 # empty grid for Germany
+
 grid_ger <- st_read(
     file.path(
         data_gebiete,
@@ -137,6 +139,7 @@ airport_grids_buffer_5km <- st_join(
     haupt_contour_buffer_5km,
     largest = TRUE
 )
+
 airport_grids_buffer_1km <- st_join(
     grid_ger,
     haupt_contour_buffer_1km,
@@ -255,6 +258,7 @@ griddata_groups <- griddata_groups |>
 
 #----------------------------------------------
 # export
+
 write.fst(
     griddata_groups,
     file.path(
@@ -265,24 +269,17 @@ write.fst(
 # -------------------------------------------------------------------------
 # descriptives by group (treated vs. control)
 
-griddata_groups <- read.fst(
-    file.path(
-        data_path, "griddata/griddata_groups.fst"
-    )
-)
-
 # define variables of interest
 griddata_groups <- griddata_groups |>
     select(
         r1_mba_a_haushalt, r1_ewa_a_gesamt, r1_alq_p_quote,
-        purchpower_household, r1_mso_p_singles, r1_mso_p_paare, r1_mso_p_familien,
-        working, treated_indicator,
+        purchpower_household, working, treated_indicator,
     )
 
-des_grid <- describeBy(
+des_grid <- psych::describeBy(
     griddata_groups,
     mat = TRUE,
-    group = "treated_indicator",
+    group = griddata_groups$treated_indicator,
     fast = T,
     na.rm = TRUE,
     digits = 3
@@ -341,8 +338,8 @@ testing <- function(var) {
 
 # define variables
 vars <- c(
-    "purchpower_household", "r1_alq_p_quote", "r1_mba_a_haushalt", "r1_ewa_a_gesamt",
-    "r1_mso_p_singles", "r1_mso_p_paare", "r1_mso_p_familien", "working"
+    "purchpower_household", "r1_alq_p_quote", "r1_mba_a_haushalt",
+    "r1_ewa_a_gesamt", "working"
 )
 
 # loop through variables
@@ -356,6 +353,7 @@ results <- rbindlist(results_list)
 
 #----------------------------------------------
 # export
+
 write.xlsx(
     results,
     file.path(
