@@ -388,6 +388,7 @@ red_geo2 <- red_geo |> filter(ajahr == 2019)
 red_geo3 <- red_geo |> filter(ajahr == 2020)
 red_geo4 <- red_geo |> filter(ajahr == 2021)
 red_geo5 <- red_geo |> filter(ajahr == 2022)
+red_geo6 <- red_geo |> filter(ajahr == 2023)
 
 # apply function to subsets
 red_geo1 <- air_noise_distance(red_geo1)
@@ -395,10 +396,11 @@ red_geo2 <- air_noise_distance(red_geo2)
 red_geo3 <- air_noise_distance(red_geo3)
 red_geo4 <- air_noise_distance(red_geo4)
 red_geo5 <- air_noise_distance(red_geo5)
+red_geo6 <- air_noise_distance(red_geo6)
 
 # merge back together
 red_geo <- rbind(
-    red_geo1, red_geo2, red_geo3, red_geo4, red_geo5
+    red_geo1, red_geo2, red_geo3, red_geo4, red_geo5, red_geo6
 )
 
 ###############################################################
