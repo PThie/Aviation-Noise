@@ -54,6 +54,11 @@ after_lock <- as.numeric(
         )
 )
 
+# define lockdown time
+lock <- as.numeric(
+    noise_data$plot_date[noise_data$year_mon == "2020-03"]
+)
+
 ##### plot
 plot_noise <- ggplot(noise_data)+
     geom_line(
@@ -71,11 +76,14 @@ plot_noise <- ggplot(noise_data)+
     geom_segment(
         mapping = aes(x = lock, xend = lock, y = 45, yend = 56),
         linetype = 3,
-        size = 1
+        linewidth = 1
     )+
     geom_segment(
         mapping = aes(
-            x = as.numeric(min(plot_date)), xend = lock, y = before_lock, yend = before_lock
+            x = as.numeric(min(plot_date)),
+            xend = lock,
+            y = before_lock,
+            yend = before_lock
         ),
         linetype = "twodash",
         linewidth = 1
@@ -93,5 +101,6 @@ ggsave(
     plot = plot_noise,
     file.path(output_path, "graphs/avg_noise_levels.png"),
     width = 8,
-    height = 5
+    height = 5,
+    dpi = owndpi
 )
