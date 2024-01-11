@@ -183,7 +183,8 @@ ggsave(
         output_path, "graphs/avg_flight_activity.png"
     ),
     width = 8,
-    height = 5
+    height = 5,
+    dpi = owndpi
 )
 
 ###############################################################
@@ -416,6 +417,7 @@ sum_freight_carry <- merge(
     sum_main_freight_carry,
     by = "year"
 )
+
 sum_freight_carry <- sum_freight_carry |>
     mutate(
         share = (sum_analysis_main / sum_all_main) * 100
