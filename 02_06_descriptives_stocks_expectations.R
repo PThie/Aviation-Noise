@@ -12,7 +12,8 @@
 # list all files
 files <- list.files(
     file.path(
-        data_path, "aktien"
+        data_path,
+        "aktien"
     ),
     pattern = "*.csv",
     full.names = TRUE
@@ -29,6 +30,17 @@ read_data <- function(company) {
         dta <- data.table::fread(
             fl, sep = ";"
         )
+
+        # change date format for Lufthansa 2023
+        if (company == "Lufthansa") {
+            if (stringr::str_detect(fl, "2023") == TRUE) {
+                dta$Datum <- as.Date(dta$Datum, "%d.%m.%Y")
+                dta$Datum <- format(dta$Datum, "%Y-%m-%d")
+            }
+        }
+
+        # set date type (in general)
+        dta$Datum <- as.Date(dta$Datum, "%Y-%m-%d")
 
         stor[[fl]] <- dta
     }
@@ -90,7 +102,7 @@ mtu <- read_data(company = "MTU_Aero_Engines")
 tui <- read_data(company = "TUI")
 dax <- read_data(company = "DAX")
 
-# combine all stocks
+# combine all aviation stocks
 stocks <- rbind(
     airbus, lufthansa, fraport, mtu, tui
 )
@@ -152,7 +164,6 @@ colnames(stocks_dax) <- c(
 stocks_dax_base <- stocks_dax |>
     filter(month >= "2018-01")
 
-
 stocks_dax_base <- stocks_dax_base |>
     mutate(
         base_open_stocks = mean_open_stocks[1],
@@ -180,7 +191,7 @@ stocks_dax_base$plot_date <- as.yearmon(stocks_dax_base$month)
 month_labels <- c(
     "Jan 2018", "May 2018", "Sep 2018", "Jan 2019", "May 2019", "Sep 2019", 
     "Jan 2020", "May 2020", "Sep 2020", "Jan 2021", "May 2021", "Sep 2021",
-    "Jan 2022", "Jun 2022"
+    "Jan 2022", "Jun 2022", "Sep 2022", "Jan 2023", "May 2023", "Sep 2023"
 )
 
 # mytheme
