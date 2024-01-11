@@ -170,10 +170,11 @@ plot_wk <- ggplot(
 ggsave(
     plot = plot_wk,
     file.path(
-        output_path, "graphs/alternative_style_diss/wk_price_development.png"
+        output_path, "graphs/wk_price_development.png"
     ), 
     width = 8,
-    height = 6
+    height = 6,
+    dpi = 800
 )
 
 ###############################################################
@@ -185,7 +186,7 @@ ggsave(
 
 overall_count_n <- housing_wk_prep |>
     # drop last month of the data
-    # because by definition of end date all adds that are active will ahve the
+    # because by definition of end date all adds that are active will have the
     # end date of the last month
     filter(year_mon_end < "2022-06") |>
     group_by(quarter, con_ring0) |>
@@ -418,7 +419,11 @@ group_descriptives <- function(housing, name){
     # calculate descriptives for before and after lockdown
     des <- describeBy(
         housing,
-        group = housing$fir_lockdown, mat = TRUE, digits = 3, fast = TRUE, na.rm = TRUE
+        group = housing$fir_lockdown,
+        mat = TRUE,
+        digits = 3,
+        fast = TRUE,
+        na.rm = TRUE
     )
     
     # drop unneeded descriptive statistics
@@ -471,6 +476,7 @@ group_descriptives <- function(housing, name){
 # subset for treated and control group
 wk_des_treat <- wk_des_data |>
     filter(con_ring0 == 1)
+
 wk_des_contr <- wk_des_data |>
     filter(con_ring0 == 0)
 
