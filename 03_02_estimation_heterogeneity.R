@@ -101,7 +101,7 @@ prep_est_march <- function(housing_data, drop_march = FALSE){
     return(housing_data)
 }
 
-wk_prep <- prep_est_march(wk_housing)
+wk_prep <- prep_est_march(wk_housing, drop_march = FALSE)
 
 #----------------------------------------------
 # table labels (for TEX output)
@@ -219,7 +219,8 @@ coef_interest <- coef_interest |>
             period,
             levels = c(
                 "t-4", "t-3", "t-2", "t-1", "t", "t+1", "t+2", "t+3",
-                "t+4", "t+5", "t+6", "t+7", "t+8", "t+9"
+                "t+4", "t+5", "t+6", "t+7", "t+8", "t+9", "t+10", "t+11",
+                "t+12", "t+13"
             )
         ),
         # define types
@@ -261,7 +262,11 @@ scale_x_discrete(
         "t+6" = "Jul '21 - Sep '21",
         "t+7" = "Oct '21 - Dec '21",
         "t+8" = "Jan '22 - Mar '22",
-        "t+9" = "Apr '22 - Jun '22"
+        "t+9" = "Apr '22 - Jun '22",
+        "t+10" = "Jul '22 - Sep '22",
+        "t+11" = "Oct '22 - Dec '22",
+        "t+12" = "Jan '23 - Mar '23",
+        "t+13" = "Apr '23 - Jun '23"
     )
 )+
 labs(
@@ -290,6 +295,11 @@ ggsave(
 # Noise intensities                                            #
 ################################################################
 # i.e. differnt noise rings
+
+# prepare data
+wk_prep_int <- prep_est_march(wk_housing, drop_march = TRUE)
+wk_prep_int <- wk_prep_int |>
+    filter(year_mon_end <= time_horizon)
 
 # define housing characteristics (controls)
 controls <- c(
@@ -320,7 +330,7 @@ reg_spacesplit <- function(dep_var){
 wk_spacesplit <- reg_spacesplit(dep_var = "ln_flatprice")
 
 # run regression
-wk_spacesplit_est <- est_fm(df = wk_prep, fm = wk_spacesplit)
+wk_spacesplit_est <- est_fm(df = wk_prep_int, fm = wk_spacesplit)
 
 # display results
 etable(
@@ -336,222 +346,4 @@ esttex(
     file = file.path(output_path, "regressions/hetero_noise_intensities_wk.tex"),
     digits = "r3", replace = TRUE, dict = tablabel_char, se = "hetero",
     signif.code = c("***" = 0.01, "**" = 0.05, "*" = 0.10)
-)
-
-################################################################
-# Noise intensities and temporal dynamics                      #
-################################################################
-
-# high noise
-wk_trend_temporal_noise_est <- feols(
-    ln_flatprice ~ alter + alter_squ + wohnflaeche + wohnflaeche_squ +
-        etage + etageUNBEKANNT + balkon + balkonUNBEKANNT + zimmeranzahl +
-        as.factor(objektzustand) + objektzustandUNBEKANNT + einbaukueche +
-        einbaukuecheUNBEKANNT + garten + gartenUNBEKANNT + as.factor(heizungsart) + 
-        heizungsartUNBEKANNT + as.factor(ausstattung) + ausstattungUNBEKANNT + 
-        badezimmer + badezimmerUNBEKANNT + distance_largcenter + distance_medcenter + 
-        distance_smalcenter + distance_all_airports_building + distance_industry + 
-        distance_railroads + distance_streets +
-        i(con_ring8, factor_var = periods, ref = "t") + 
-        i(con_ring5, factor_var = periods, ref = "t"),
-        data = wk_prep, fixef = c("months", "r1_id"), se = "hetero"
-)
-
-etable(
-    wk_trend_temporal_noise_est,
-    signif.code = c("***" = 0.01, "**" = 0.05, "*" = 0.10),
-    digits = "r3", se = "hetero"
-)
-
-# export
-esttex(
-    wk_trend_temporal_noise_est,
-    file = file.path(output_path, "regressions/hetero_temporal_dynamics_intensities.tex"),
-    digits = "r3", replace = TRUE, dict = tablabel_char, se = "hetero",
-    signif.code = c("***" = 0.01, "**" = 0.05, "*" = 0.10)
-)
-
-#----------------------------------------------
-# make interval graph
-
-# extract coefficients and standard errors
-coef <- as.data.frame(
-    cbind(
-        summary(wk_trend_temporal_noise_est)$coefficients,
-        summary(wk_trend_temporal_noise_est)$se
-    )
-)
-
-# get variable names from rows
-coef$vars <- rownames(coef)
-
-# set names for data frame
-names(coef) <- c("coef", "se", "vars")
-rownames(coef) <- seq(1, nrow(coef), 1)
-
-# keep only period estimates
-coef_interest <- coef |>
-    filter(stringr::str_detect(vars, "period") == TRUE)
-
-# add reference group (t)
-coef_interest <- rbind(
-    coef_interest,
-    as.data.frame(cbind(coef = 0, se = 0, vars = "periods::t:con_ring8")),
-    as.data.frame(cbind(coef = 0, se = 0, vars = "periods::t:con_ring5"))
-)
-
-# confidence interval threshold
-conf <- 1.64
-
-# define period names
-coef_interest <- coef_interest |>
-    mutate(
-        period = stringr::str_replace(
-            vars,
-            pattern = "periods::",
-            replacement = ""
-        ),
-        period = stringr::str_replace(
-            period,
-            pattern = ":con_ring8",
-            replacement = ""
-        ),
-        period = stringr::str_replace(
-            period,
-            pattern = ":con_ring5",
-            replacement = ""
-        ),
-        # set period as factor
-        period = factor(
-            period,
-            levels = c(
-                "t-4", "t-3", "t-2", "t-1", "t", "t+1", "t+2", "t+3",
-                "t+4", "t+5", "t+6", "t+7", "t+8", "t+9"
-            )
-        ),
-        # define group
-        group = case_when(
-            stringr::str_detect(vars, "con_ring8") == TRUE ~ "high",
-            TRUE ~ "low"
-        ),
-        # define types
-        coef = as.numeric(coef),
-        se = as.numeric(se),
-        # define confidence interval
-        conf_min = coef - (conf * se),
-        conf_max = coef + (conf * se)
-    )
-
-#----------------------------------------------
-# plot high noise
-int_temporal_dyn_high <- ggplot()+
-    geom_pointrange(
-        data = coef_interest |> filter(group == "high"),
-        mapping = aes(x = period, y = coef, ymin = conf_min, ymax = conf_max, group = factor(group)),
-        position = position_dodge(width = 0.7),
-        size = 0.6,
-        shape = 15
-    )+
-    geom_hline(yintercept = 0)+
-    geom_vline(xintercept = "t", linetype = "twodash")+
-    scale_y_continuous(
-    breaks = seq(-0.10, 0.10, 0.02)
-    )+
-    scale_x_discrete(
-        labels = c(
-            "t-4" = "Jan '18 - Aug '18",
-            "t-3" = "Sep '18 - Feb '19",
-            "t-2" = "Mar '19 - Aug '19",
-            "t-1" = "Sep '19 - Feb '20",
-            "t" = "Mar '20",
-            "t+1" = "Apr '20 - Jun '20",
-            "t+2" = "Jul '20 - Sep '20",
-            "t+3" = "Oct '20 - Dec '20",
-            "t+4" = "Jan '21 - Mar '21",
-            "t+5" = "Apr '21 - Jun '21",
-            "t+6" = "Jul '21 - Sep '21",
-            "t+7" = "Oct '21 - Dec '21",
-            "t+8" = "Jan '22 - Mar '22",
-            "t+9" = "Apr '22 - Jun '22"
-        )
-    )+
-    labs(
-        x = "",
-        y = "Coefficients and 90% CI"
-    )+
-    theme(
-        panel.background = element_blank(),
-        panel.border = element_rect(linewidth = 1, fill = NA),
-        axis.text = element_text(size = 15),
-        axis.title = element_text(size = 17),
-        legend.key = element_blank(),
-        axis.text.x = element_text(angle = 45, hjust = 1),
-        axis.ticks.length = unit(units = "cm", 0.2)
-    )
-
-# export
-ggsave(
-    plot = int_temporal_dyn_high,
-    file.path(
-        output_path, "graphs/time_spaceplit_highnoise_plot.png"
-    ),
-    height = 10,
-    width = 13
-)
-
-#----------------------------------------------
-# plot low noise
-int_temporal_dyn_low <- ggplot()+
-    geom_pointrange(
-        data = coef_interest |> filter(group == "low"),
-        mapping = aes(x = period, y = coef, ymin = conf_min, ymax = conf_max, group = factor(group)),
-        position = position_dodge(width = 0.7),
-        size = 0.6,
-        shape = 17
-    )+
-    geom_hline(yintercept = 0)+
-    geom_vline(xintercept = "t", linetype = "twodash")+
-    scale_y_continuous(
-    breaks = seq(-0.10, 0.10, 0.02)
-    )+
-    scale_x_discrete(
-        labels = c(
-            "t-4" = "Jan '18 - Aug '18",
-            "t-3" = "Sep '18 - Feb '19",
-            "t-2" = "Mar '19 - Aug '19",
-            "t-1" = "Sep '19 - Feb '20",
-            "t" = "Mar '20",
-            "t+1" = "Apr '20 - Jun '20",
-            "t+2" = "Jul '20 - Sep '20",
-            "t+3" = "Oct '20 - Dec '20",
-            "t+4" = "Jan '21 - Mar '21",
-            "t+5" = "Apr '21 - Jun '21",
-            "t+6" = "Jul '21 - Sep '21",
-            "t+7" = "Oct '21 - Dec '21",
-            "t+8" = "Jan '22 - Mar '22",
-            "t+9" = "Apr '22 - Jun '22"
-        )
-    )+
-    labs(
-        x = "",
-        y = "Coefficients and 90% CI"
-    )+
-    theme(
-        panel.background = element_blank(),
-        panel.border = element_rect(linewidth = 1, fill = NA),
-        axis.text = element_text(size = 15),
-        axis.title = element_text(size = 17),
-        legend.key = element_blank(),
-        axis.text.x = element_text(angle = 45, hjust = 1),
-        axis.ticks.length = unit(units = "cm", 0.2)
-    )
-
-# export
-ggsave(
-    plot = int_temporal_dyn_low,
-    file.path(
-        output_path, "graphs/time_spaceplit_lownoise_plot.png"
-    ),
-    height = 10,
-    width = 13
 )
