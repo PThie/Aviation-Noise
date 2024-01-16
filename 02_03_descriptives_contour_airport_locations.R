@@ -11,6 +11,7 @@
 
 #----------------------------------------------
 # airport locations
+
 airport_locations <- qs::qread(
     file.path(
         data_path,
@@ -20,6 +21,7 @@ airport_locations <- qs::qread(
 
 #----------------------------------------------
 # load state boundaries
+
 bula <- st_read(
     file.path(
         data_gebiete,
@@ -50,6 +52,7 @@ airports_main <- airport_locations |>
 
 # keep only the airports which included in the study
 included_airports <- c("EDDL", "EDDV", "EDDP", "EDDF", "EDDM", "EDDH", "EDDS", "EDDN", "EDDK")
+
 airports_main <- airports_main |>
     filter(icao %in% included_airports == TRUE) |>
     # add labels for included airports
@@ -110,6 +113,7 @@ ggsave(
 
 #----------------------------------------------
 # subset for Hamburg
+
 contour_ham <- haupt_contour |>
     filter(
         icao == "EDDH"
@@ -117,6 +121,10 @@ contour_ham <- haupt_contour |>
 
 #----------------------------------------------
 # prepare background map
+# TODO: Needs to be updated since the access now works through an API.
+
+# register stadia map
+register_stadiamaps(api_key_stamen, write = FALSE)
 
 # change to a format which works with extracting map
 contour_ham4326 <- st_transform(contour_ham, crs = 4326)
@@ -131,7 +139,7 @@ bbox_ham <- c(bbox_ham[1:2] - 0.002, bbox_ham[3:4] + 0.002)
 names(bbox_ham) <- c("left", "bottom", "right", "top")
 
 # get background map from Stamen
-background_map <- ggmap::get_stamenmap(
+background_map <- ggmap::get_stadiamap(
     bbox = bbox_ham,
     color = "bw",
     force = TRUE,
