@@ -32,6 +32,7 @@ grid500 <- st_read(
     ),
     quiet = TRUE
 )
+
 grid250 <- st_read(
     file.path(
         data_path,
@@ -39,6 +40,7 @@ grid250 <- st_read(
     ),
     quiet = TRUE
 )
+
 grid5000 <- st_read(
     file.path(
         data_path,
@@ -143,7 +145,11 @@ prep_est_march <- function(housing_data, drop_march = FALSE){
                     year_mon_end >= "2021-07" & year_mon_end <= "2021-09" ~ "t+6",
                     year_mon_end >= "2021-10" & year_mon_end <= "2021-12" ~ "t+7",
                     year_mon_end >= "2022-01" & year_mon_end <= "2022-03" ~ "t+8",
-                    year_mon_end >= "2022-04" & year_mon_end <= "2022-06" ~ "t+9"
+                    year_mon_end >= "2022-04" & year_mon_end <= "2022-06" ~ "t+9",
+                    year_mon_end >= "2022-07" & year_mon_end <= "2022-09" ~ "t+10",
+                    year_mon_end >= "2022-10" & year_mon_end <= "2022-12" ~ "t+11",
+                    year_mon_end >= "2023-01" & year_mon_end <= "2023-03" ~ "t+12",
+                    year_mon_end >= "2023-04" & year_mon_end <= "2023-06" ~ "t+13"
                 ),
                 periods = as.factor(periods)
             )
@@ -153,12 +159,17 @@ prep_est_march <- function(housing_data, drop_march = FALSE){
     return(housing_data)
 }
 
+# restrict to time horizon
+wk_housing <- wk_housing |>
+    filter(year_mon_end <= time_horizon)
+
 wk_prep <- prep_est(wk_housing)
-hk_prep <- prep_est_march(hk_housing)
-wm_prep <- prep_est_march(wm_housing)
+hk_prep <- prep_est_march(hk_housing, drop_march = FALSE)
+wm_prep <- prep_est_march(wm_housing, drop_march = FALSE)
 
 #----------------------------------------------
 # table labels (for TEX output)
+
 tablabel_char <- c(
     "alter" = "Age", "alter_squ" = "Age$^2$", "wohnflaeche" = "Living space", "wohnflaeche_squ" = "Living space$^2$", 
     "as.factor(objektzustand)2" = "Condition: First occupancy after reconstruction", "as.factor(objektzustand)3" = "Condition: Like new", "as.factor(objektzustand)4" = "Condition: Reconstructed",
@@ -175,6 +186,7 @@ tablabel_char <- c(
 
 #----------------------------------------------
 # baseline formula function
+
 reg_base_allring_lockdown <- function(dep_var, cnt) {
     #' @param dep_var Dependent variable (LHS)
     #' @param cnt Controls
@@ -190,6 +202,7 @@ reg_base_allring_lockdown <- function(dep_var, cnt) {
 
 #----------------------------------------------
 # estimation function
+
 est_fm <- function(df, fm){
     feols(fml = fm, data = df)
 }
@@ -312,6 +325,7 @@ wk_base <- reg_base_allring_lockdown(dep_var = "ln_flatprice", cnt = controls)
 
 #----------------------------------------------
 # estimation
+
 wk_base_nz <- est_fm(df = wk_prep_withbuffer, fm = wk_base)
 
 # display results
@@ -328,6 +342,7 @@ etable(
 
 #----------------------------------------------
 # prep grid function
+
 prep_grid <- function(grid_sf, gridIDname){
     # keep only relevant columns
     grid_sf <- grid_sf |>
@@ -437,6 +452,7 @@ wk_base_trend <- reg_base_allring_lockdown_trend(dep_var = "ln_flatprice")
 
 #----------------------------------------------
 # estimation
+
 wk_base_trend <- est_fm(df = wk_prep, fm = wk_base_trend)
 
 # display results
