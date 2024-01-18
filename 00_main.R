@@ -37,6 +37,7 @@ suppressPackageStartupMessages(
         library(stringr)
         library(ggmap)
         library(cartography)
+        library(broom)
     }
 )
 
