@@ -91,26 +91,22 @@ write.xlsx(
 
 # take model and plug in the original data (while keeping all columns even
 # though not in the model)
-con_ring0_ipw <- augment_columns(
-    model_treated,
-    wk_housing,
-    type.predict = "response"
-) |>
-rename(propensity = .fitted)
-
-# generate the weights
-con_ring0_ipw <- con_ring0_ipw |>
+con_ring0_ipw <- wk_housing |>
     mutate(
-        ipw_weights = (con_ring0 / propensity) +
-            ((1 - con_ring0) / (1 - propensity))
+        propensity_nonstabilized = case_when(
+            con_ring0 == 0 ~ 1 - predict(model_treated, type = "response"),
+            TRUE ~ predict(model_treated, type = "response")
+        ),
+        ipw_weights_nonstabilized = 1 / propensity_nonstabilized
     )
+
 
 #----------------------------------------------
 # rerun baseline regression but now with IPW weights
 
 est_mod_weighted <- feols(
     fml = reg_base_allring_lockdown(dep_var = "ln_flatprice", cnt = controls, basemod = TRUE),
-    weights = ~ ipw_weights,
+    weights = ~ ipw_weights_nonstabilized,
     data = con_ring0_ipw
 )
 
