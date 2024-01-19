@@ -117,6 +117,15 @@ muc <- muc |>
 # merge everything together and aggregate based just on month
 all <- rbind(dus, fra, ham, haj, lej, muc)
 
+# number of stations per airport
+all |>
+    group_by(airport_name) |>
+    distinct(station) |>
+    summarise(
+        n = n()
+    ) |>
+    as.data.frame()
+
 #----------------------------------------------
 # aggregation function
 agg_fun <- function(
