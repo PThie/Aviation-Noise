@@ -118,7 +118,9 @@ wk_prep_control_restricted <- wk_prep_control |>
     filter(distance_all_airports_building >= quant_calc(var = "distance_all_airports_building", lower_quantile) & distance_all_airports_building <= quant_calc(var = "distance_all_airports_building", upper_quantile)) |>
     filter(distance_industry >= quant_calc(var = "distance_industry", lower_quantile) & distance_industry <= quant_calc(var = "distance_industry", upper_quantile)) |>
     filter(distance_railroads >= quant_calc(var = "distance_railroads", lower_quantile) & distance_railroads <= quant_calc(var = "distance_railroads", upper_quantile)) |>
-    filter(distance_streets >= quant_calc(var = "distance_streets", lower_quantile) & distance_streets <= quant_calc(var = "distance_streets", upper_quantile))
+    filter(distance_streets >= quant_calc(var = "distance_streets", lower_quantile) & distance_streets <= quant_calc(var = "distance_streets", upper_quantile)) |>
+    filter(etage >= quant_calc(var = "etage", lower_quantile) & etage <= quant_calc(var = "etage", upper_quantile)) |>
+    filter(badezimmer >= quant_calc(var = "badezimmer", lower_quantile) & badezimmer <= quant_calc(var = "badezimmer", upper_quantile))
 
 # combine unchanged treatment group and new control group data
 wk_prep_new_control <- rbind(
