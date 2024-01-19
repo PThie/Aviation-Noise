@@ -113,7 +113,7 @@ est_mod_weighted <- feols(
 etable(
     est_mod_weighted,
     signif.code = c("***" = 0.01, "**" = 0.05, "*" = 0.10),
-    digits = "r3", se = "hetero", drop = "months"
+    digits = "r3", se = "hetero"
 )
 
 # export
