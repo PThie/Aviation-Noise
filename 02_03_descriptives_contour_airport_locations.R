@@ -228,7 +228,7 @@ plot_ham_org <- ggmap::ggmap(background_map)+
 ggsave(
     plot = plot_ham_org,
     file.path(
-        output_path, "graphs/contour_ham_orginal.png"
+        output_path, "graphs/contour_ham_original.png"
     ),
     dpi = owndpi
 )
