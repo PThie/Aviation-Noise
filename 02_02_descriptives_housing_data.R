@@ -18,10 +18,6 @@ housing_wk <- qs::qread(
     )
 )
 
-# restrict data to the maximum time frame
-housing_wk <- housing_wk |>
-    filter(year_mon_end <= time_horizon)
-
 ###############################################################
 # Plotting price development                                  #
 ###############################################################
@@ -188,7 +184,6 @@ overall_count_n <- housing_wk_prep |>
     # drop last month of the data
     # because by definition of end date all adds that are active will have the
     # end date of the last month
-    filter(year_mon_end < "2022-06") |>
     group_by(quarter, con_ring0) |>
     summarise(
         n = n()
@@ -216,7 +211,7 @@ plot_count_overall <- ggplot(
         name = "Groups"
     )+
     scale_y_continuous(
-        breaks = seq(0, 10000, 1000),
+        breaks = seq(0, 15000, 1000),
         labels = scales::comma
     )+
     scale_x_yearqtr(
@@ -225,7 +220,7 @@ plot_count_overall <- ggplot(
         breaks = seq(min(overall_count_n$quarter), max(overall_count_n$quarter), 0.25)
     )+
     geom_segment(
-        aes(x = 2020.00, xend = 2020.00, y = 0, yend = 6000),
+        aes(x = 2020.00, xend = 2020.00, y = 0, yend = 15000),
         linetype = "dotted",
         linewidth = 0.9
     )+
@@ -260,7 +255,6 @@ count_airport_n <- housing_wk_prep |>
     # drop last month of the data
     # because by definition of end date all adds that are active will ahve the
     # end date of the last month
-    filter(year_mon_end < "2022-06") |>
     group_by(closest_main_airports, quarter, con_ring0) |>
     summarise(
         n = n()
@@ -346,7 +340,7 @@ plot_count_airports <- ggplot()+
         name = "Airports"
     )+
     scale_y_continuous(
-        breaks = seq(0, 3000, 500),
+        breaks = seq(0, 3500, 500),
         labels = scales::comma
     )+
     scale_x_yearqtr(
@@ -355,7 +349,7 @@ plot_count_airports <- ggplot()+
         breaks = seq(min(count_airport_n$quarter), max(count_airport_n$quarter), 0.25)
     )+
     geom_segment(
-        aes(x = 2020.00, xend = 2020.00, y = 0, yend = 2000),
+        aes(x = 2020.00, xend = 2020.00, y = 0, yend = 3500),
         linetype = "dotted",
         linewidth = 0.9
     )+

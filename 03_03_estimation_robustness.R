@@ -51,6 +51,7 @@ grid5000 <- st_read(
 
 #----------------------------------------------
 # airport locations
+
 airport_locations <- qs::qread(
     file.path(
         data_path,
@@ -158,10 +159,6 @@ prep_est_march <- function(housing_data, drop_march = FALSE){
     # return
     return(housing_data)
 }
-
-# restrict to time horizon
-wk_housing <- wk_housing |>
-    filter(year_mon_end <= time_horizon)
 
 wk_prep <- prep_est(wk_housing)
 hk_prep <- prep_est_march(hk_housing, drop_march = FALSE)

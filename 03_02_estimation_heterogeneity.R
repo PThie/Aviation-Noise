@@ -298,8 +298,6 @@ ggsave(
 
 # prepare data
 wk_prep_int <- prep_est_march(wk_housing, drop_march = TRUE)
-wk_prep_int <- wk_prep_int |>
-    filter(year_mon_end <= time_horizon)
 
 # define housing characteristics (controls)
 controls <- c(

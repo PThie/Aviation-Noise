@@ -23,19 +23,6 @@ wk_housing <- prep_est(wk_housing)
 hk_housing <- prep_est(hk_housing)
 wm_housing <- prep_est(wm_housing)
 
-# without restriction
-wk_housing_complete <- wk_housing
-
-# restrict data to the maximum time frame
-wk_housing <- wk_housing |>
-    filter(year_mon_end <= time_horizon)
-
-hk_housing <- hk_housing |>
-    filter(year_mon_end <= time_horizon)
-
-wm_housing <- wm_housing |>
-    filter(year_mon_end <= time_horizon)
-
 #----------------------------------------------
 # define housing characteristics (controls)
 
@@ -67,12 +54,6 @@ controls_with_time <- c(
 # for apartments add factor variable of airports
 
 wk_housing <- wk_housing |>
-    mutate(
-        airportFE = as.factor(closest_main_airports),
-        plzFE = as.factor(plz)
-    )
-
-wk_housing_complete <- wk_housing_complete |>
     mutate(
         airportFE = as.factor(closest_main_airports),
         plzFE = as.factor(plz)
@@ -219,9 +200,6 @@ wk_base_est_airportFE <- est_fm_uncond(df = wk_housing, dependent = "ln_flatpric
 wk_base_est_zipcodeFE <- est_fm_uncond(df = wk_housing, dependent = "ln_flatprice", contr = "yes", FE = "zipcode")
 wk_base_est_standard <- est_fm_uncond(df = wk_housing, dependent = "ln_flatprice", contr = "yes", FE = "no")
 
-# FE with complete time horizon
-wk_base_est_bothFE_complete <- est_fm(df = wk_housing_complete, dependent = "ln_flatprice", contr = controls, FE = "both")
-
 # display results
 etable(
     wk_base_est_ols, wk_base_est_timeFE, wk_base_est_regionFE, wk_base_est_bothFE,
@@ -253,13 +231,6 @@ esttex(
 esttex(
     wk_base_est_zipcodeFE,
     file = file.path(output_path, "regressions/base_wk_zipcodeFE.tex"),
-    digits = "r3", replace = TRUE, dict = tablabel_char, se = "hetero",
-    signif.code = c("***" = 0.01, "**" = 0.05, "*" = 0.10)
-)
-
-esttex(
-    wk_base_est_bothFE_complete,
-    file = file.path(output_path, "regressions/base_wk_complete_horizon.tex"),
     digits = "r3", replace = TRUE, dict = tablabel_char, se = "hetero",
     signif.code = c("***" = 0.01, "**" = 0.05, "*" = 0.10)
 )

@@ -48,8 +48,6 @@ suppressPackageStartupMessages(
 immo_version <- "v9"
 utmcrs <- 32632
 owndpi <- 800
-# maximum time frame for the analysis (except for temporal pattern)
-time_horizon <- "2022-06"
 
 # ggplot theme (line graphs)
 owntheme <- ggplot2::theme(
