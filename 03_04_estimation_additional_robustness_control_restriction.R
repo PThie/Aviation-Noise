@@ -15,10 +15,6 @@ wk_housing <- read_housing(filename = "WK_complete")
 # Preparation                                                  #
 ################################################################
 
-# restrict to time horizon
-wk_housing <- wk_housing |>
-    filter(year_mon_end <= time_horizon)
-
 wk_prep <- prep_est(wk_housing)
 
 #----------------------------------------------

@@ -8,10 +8,6 @@ wk_housing <- read_housing(filename = "WK_complete")
 # Preparation                                                  #
 ################################################################
 
-# restrict to time horizon
-wk_housing <- wk_housing |>
-    filter(year_mon_end <= time_horizon)
-
 # prepare for estimation
 wk_housing <- prep_est(wk_housing)
 
@@ -99,7 +95,6 @@ con_ring0_ipw <- wk_housing |>
         ),
         ipw_weights_nonstabilized = 1 / propensity_nonstabilized
     )
-
 
 #----------------------------------------------
 # rerun baseline regression but now with IPW weights
