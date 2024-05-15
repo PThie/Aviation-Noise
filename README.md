@@ -4,6 +4,7 @@ This repository provides the coding for the research project "Housing Prices,
 Aiport Noise and an Unforseeable Event of Silence".
 
 Authors: Philipp Breidenbach and Patrick Thiel
+Code author: Patrick Thiel
 
 ## Abstract
 
