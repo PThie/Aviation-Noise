@@ -200,6 +200,12 @@ wk_base_est_airportFE <- est_fm_uncond(df = wk_housing, dependent = "ln_flatpric
 wk_base_est_zipcodeFE <- est_fm_uncond(df = wk_housing, dependent = "ln_flatprice", contr = "yes", FE = "zipcode")
 wk_base_est_standard <- est_fm_uncond(df = wk_housing, dependent = "ln_flatprice", contr = "yes", FE = "no")
 
+# estimation without April-June 2020
+wk_housing_without_apr_june <- wk_housing |>
+    filter(end_date < "2020-04-01" | end_date > "2020-06-01")
+
+wk_base_est_without_apr_june <- est_fm(df = wk_housing_without_apr_june, dependent = "ln_flatprice", contr = controls, FE = "both")
+
 # display results
 etable(
     wk_base_est_ols, wk_base_est_timeFE, wk_base_est_regionFE, wk_base_est_bothFE,
@@ -231,6 +237,13 @@ esttex(
 esttex(
     wk_base_est_zipcodeFE,
     file = file.path(output_path, "regressions/base_wk_zipcodeFE.tex"),
+    digits = "r3", replace = TRUE, dict = tablabel_char, se = "hetero",
+    signif.code = c("***" = 0.01, "**" = 0.05, "*" = 0.10)
+)
+
+esttex(
+    wk_base_est_without_apr_june,
+    file = file.path(output_path, "regressions/base_wk_without_apr_june.tex"),
     digits = "r3", replace = TRUE, dict = tablabel_char, se = "hetero",
     signif.code = c("***" = 0.01, "**" = 0.05, "*" = 0.10)
 )
